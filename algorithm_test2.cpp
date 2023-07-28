@@ -23,6 +23,10 @@ int main(int argc, char** argv) {
    else 
      cout << "not all elements of vector v are even" << endl;
   
+   // find the first element which satisfies the condition
+   vector<int>::iterator p = find_if(v.begin(), v.end(), [](int &a){ return a > 20;});
+   cout << "The first element of the vector v which is greater than 20 is " << *p << endl;;
+
    vector<int> u(15, 0);
    // NOTE: changes the input vector too
    transform(v.begin(), v.end(), u.begin(), [](auto& e){ return e*=2; });
@@ -39,6 +43,7 @@ int main(int argc, char** argv) {
    cout << "Sorted elements of vector u:" << endl;
    for(auto& e: u) cout << e << " ";
    cout << endl;
+
 
    return 0;
 }
