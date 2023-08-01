@@ -7,7 +7,7 @@ using namespace std;
 
 int main () {
 
-	map<int, string, less<>> solar_system;
+  map<int, string, less<>> solar_system;
   // third template argument is a constexpr sorting rule
   // in this case sort in ascending order
 
