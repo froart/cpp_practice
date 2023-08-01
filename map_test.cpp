@@ -38,6 +38,7 @@ int main () {
   // solar_system.insert(move(pluto_node));
 
   // print map
+  cout << "--- Solar System map ---" << endl;
 	for(const auto& [k, v] : solar_system) cout << k << ": " << v << endl;
 
   // erase an element
@@ -46,6 +47,7 @@ int main () {
   cout << "number of planets erased: " << num << endl;
 
   // print map
+  cout << "--- Solar System map ---" << endl;
 	for(const auto& [k, v] : solar_system)	cout << k << ": " << v << endl;
 
   // initialized map
@@ -53,6 +55,7 @@ int main () {
 
   // another way to print map (more complicated)
   map<string, int>::iterator it = ages.begin();
+  cout << "--- Ages map ---" << endl;
   while(it != ages.end()) {
       cout << "name: " << it->first << ", age: " << it->second << endl;
       ++it;
@@ -65,8 +68,23 @@ int main () {
      cout << "Found " << k << ": " << v << endl;
   }
  
-  ages.insert_or_assign("Artemiy", 29);
-  for(auto [k, v]: ages) cout << k << ": " << v << endl;
+  // Insert or modify the key-value pair
+  // if the key already exists this function will modify its value unlike insert()
+  ages.insert_or_assign("Artemiy", 29); 
+
+  cout << "--- Ages map ---" << endl;
+  for(const auto [k, v]: ages) cout << k << ": " << v << endl;
+
+  // Another way to insert an element
+  // this one is more efficient since, it avoids copying and allocating objects, but
+  const auto [iter2, success2] = ages.emplace("Alexey", 43);
+
+  cout << "--- Ages map ---" << endl;
+  for(const auto [k, v]: ages) cout << k << ": " << v << endl;
+  
+  // clear the contents of both maps
+  solar_system.clear();
+  ages.clear();
 
 	return 0;
 }
