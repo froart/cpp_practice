@@ -12,13 +12,13 @@ int main () {
   // in this case sort in ascending order
 
   // element insertion
-	solar_system[0] = "Sun" ; // this inserts a new element
-	solar_system[1] = "Mercury";
-	solar_system[2] = "Venus";
-	solar_system[3] = "Earth";
-	solar_system[4] = "Mars";
-	solar_system[5] = "Jupiter";
-	solar_system[6] = "Saturn";
+  solar_system[0] = "Sun" ; // this inserts a new element
+  solar_system[1] = "Mercury";
+  solar_system[2] = "Venus";
+  solar_system[3] = "Earth";
+  solar_system[4] = "Mars";
+  solar_system[5] = "Jupiter";
+  solar_system[6] = "Saturn";
   // another way to insert an element (more complicated)
   // m0.insert(make_pair("earth", 3));
   // OR
@@ -39,7 +39,7 @@ int main () {
 
   // print map
   cout << "--- Solar System map ---" << endl;
-	for(const auto& [k, v] : solar_system) cout << k << ": " << v << endl;
+  for(const auto& [k, v] : solar_system) cout << k << ": " << v << endl;
 
   // erase an element
   int num = solar_system.erase(9); // returns a number of elements erased
@@ -48,7 +48,7 @@ int main () {
 
   // print map
   cout << "--- Solar System map ---" << endl;
-	for(const auto& [k, v] : solar_system)	cout << k << ": " << v << endl;
+  for(const auto& [k, v] : solar_system)	cout << k << ": " << v << endl;
 
   // initialized map
   map<string, int> ages = {{"Artemiy", 28}, {"Krzysztof", 70}, {"Anton", 32}};
@@ -86,5 +86,5 @@ int main () {
   solar_system.clear();
   ages.clear();
 
-	return 0;
+  return 0;
 }
