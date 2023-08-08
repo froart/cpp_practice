@@ -54,7 +54,7 @@ class Matrix {
           this->resize(other.rowNum_, other.colNum_);
           this->data_ = other.data_;
           return *this;
-       }
+       };
        // usefull member functions
        void resize(int rowNum, int colNum) {
           this->data_.resize(rowNum); // resize the number of rows of the matrix
@@ -62,7 +62,7 @@ class Matrix {
              row.resize(colNum);
           this->rowNum_ = rowNum;
           this->colNum_ = colNum;
-       }
+       };
        void print() {
           for(int i = 0; i < this->colNum_; ++i)
              cout << "--";
@@ -93,8 +93,17 @@ class Matrix {
              for(int i = 0; i < this->colNum_; ++i)
                 result.data_[j][i] = this->data_[j][i] + other.data_[j][i];
           return result;
-          
-       }
+       };
+       Matrix<T> operator-(const Matrix<T> other) {
+          if(this->rowNum_ != other.rowNum_ || this->colNum_ != other.colNum_) // check matrices compatibility
+             throw invalid_argument("Matrices can't be summed up due to their size incompatibility!");
+          Matrix<T> result(this->rowNum_, this->colNum_);
+          for(int j = 0; j < this->rowNum_; ++j)
+             for(int i = 0; i < this->colNum_; ++i)
+                result.data_[j][i] = this->data_[j][i] - other.data_[j][i];
+          return result;
+       };
+
 };
 
 int main() {
@@ -128,6 +137,10 @@ int main() {
    cout << "Summation of mat2 with itself:" << endl;
    Matrix<int> mat6 = mat2 + mat2;
    mat6.print();
+
+   cout << "Subtraction of mat2 from itself:" << endl;
+   Matrix<int> mat7 = mat2 - mat2;
+   mat7.print();
 
    return 0;
 }
