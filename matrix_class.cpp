@@ -14,6 +14,7 @@ class Matrix {
        int colNum_;
        vector<vector<T>> data_;
    public:
+       // Constructors
        Matrix() { // default constructor
           this->rowNum_ = 0;
           this->colNum_ = 0;
@@ -54,6 +55,7 @@ class Matrix {
           this->data_ = other.data_;
           return *this;
        }
+       // usefull member functions
        void resize(int rowNum, int colNum) {
           this->data_.resize(rowNum); // resize the number of rows of the matrix
           for(auto& row: this->data_) // resize each row
@@ -72,6 +74,7 @@ class Matrix {
              cout << "--";
           cout << endl;
        };
+       // operator overloads
        Matrix<T> operator*(const Matrix<T>& other) {
           if(this->colNum_ != other.rowNum_) // check matrices compatibility
              throw invalid_argument("Matrices can't be multiplied due to their size incompatibility!");
@@ -82,6 +85,16 @@ class Matrix {
                    result.data_[j][i] += this->data_[j][k] * other.data_[k][i];
           return result;
        }; 
+       Matrix<T> operator+(const Matrix<T> other) {
+          if(this->rowNum_ != other.rowNum_ || this->colNum_ != other.colNum_) // check matrices compatibility
+             throw invalid_argument("Matrices can't be summed up due to their size incompatibility!");
+          Matrix<T> result(this->rowNum_, this->colNum_);
+          for(int j = 0; j < this->rowNum_; ++j)
+             for(int i = 0; i < this->colNum_; ++i)
+                result.data_[j][i] = this->data_[j][i] + other.data_[j][i];
+          return result;
+          
+       }
 };
 
 int main() {
@@ -108,8 +121,13 @@ int main() {
    Matrix<int> identity = {{1,0,0},
                            {0,1,0},
                            {0,0,1}}; 
-   Matrix<int> mat7 = identity * identity;
+   Matrix<int> mat5 = identity * identity;
    cout << "Multiplication of two identity matrices: " << endl;
-   mat7.print(); // must still be identity matrix
+   mat5.print(); // must still be identity matrix
+
+   cout << "Summation of mat2 with itself:" << endl;
+   Matrix<int> mat6 = mat2 + mat2;
+   mat6.print();
+
    return 0;
 }
