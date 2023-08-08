@@ -18,32 +18,26 @@ class Matrix {
           this->rowNum_ = 0;
           this->colNum_ = 0;
        }; 
-       Matrix(int rowNum, int colNum) : rowNum_(rowNum), colNum_(colNum) { // parametrized constructor
-          this->data_.resize(this->rowNum_);
-          for(auto& row: this->data_)
-             row.resize(this->colNum_);
-          for(auto& row: this->data_)
+       Matrix(int rowNum, int colNum) { // parametrized constructor #1
+          this->resize(rowNum, colNum);
+          for(auto& row: this->data_) // assign 0 to each element of the matrix
              for(auto& element: row)
-                element = (T)0; 
+                element = (T)0; // statically cast to type T
        };
-       Matrix(initializer_list<initializer_list<T>> lst) { // parametrized constructor
-          this->rowNum_ = lst.size();
+       Matrix(initializer_list<initializer_list<T>> lst) { // parametrized constructor #2
           // find the longest nested initializer_list
           int size = 0;
           for(const auto& e: lst)
              if(e.size() > size) size = e.size();
-          this->colNum_ = size;
-          // resize our matrix
-          this->data_.resize(this->rowNum_);
-          for(auto& row: this->data_)
-             row.resize(this->colNum_);
+          // resize matrix accoring to initializer_list
+          this->resize(lst.size(), size);
           // map initializer_list values to out matrix
-          auto lst_row = lst.begin();
+          auto lst_row_it = lst.begin();
           for(int j = 0; j < this->rowNum_; ++j) {
              for(int i = 0; i < this->colNum_; ++i) {
-                this->data_[j][i] = (i > lst_row->size()) ? 0 : *(lst_row->begin() + i); // fill with zeroes for the incomplete initializer_lists
+                this->data_[j][i] = (i > lst_row_it->size()) ? 0 : *(lst_row_it->begin() + i); // fill with zeroes for the incomplete initializer_lists
              }
-             ++lst_row;
+             ++lst_row_it;
           }
        };
        Matrix<T>& operator=(initializer_list<initializer_list<T>> lst) {
@@ -52,15 +46,20 @@ class Matrix {
           return *this;
        }
        Matrix(const Matrix<T>& other) { // copy constructor
-          this->colNum_ = other.colNum_;
-          this->rowNum_ = other.rowNum_;
+          this->resize(other.rowNum_, other.colNum_);
           this->data_ = other.data_;
        };
        Matrix<T>& operator=(const Matrix<T>& other) { // copy assign constructor
-          this->colNum_ = other.colNum_;
-          this->rowNum_ = other.rowNum_;
+          this->resize(other.rowNum_, other.colNum_);
           this->data_ = other.data_;
           return *this;
+       }
+       void resize(int rowNum, int colNum) {
+          this->data_.resize(rowNum); // resize the number of rows of the matrix
+          for(auto& row: this->data_) // resize each row
+             row.resize(colNum);
+          this->rowNum_ = rowNum;
+          this->colNum_ = colNum;
        }
        void print() {
           for(int i = 0; i < this->colNum_; ++i)
@@ -107,8 +106,8 @@ int main() {
    mat4.print();
 
    Matrix<int> identity = {{1,0,0},
-                       {0,1,0},
-                       {0,0,1}}; 
+                           {0,1,0},
+                           {0,0,1}}; 
    Matrix<int> mat7 = identity * identity;
    cout << "Multiplication of two identity matrices: " << endl;
    mat7.print(); // must still be identity matrix
