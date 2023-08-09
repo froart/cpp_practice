@@ -36,7 +36,7 @@ class Matrix {
           auto lst_row_it = lst.begin();
           for(int j = 0; j < this->rowNum_; ++j) {
              for(int i = 0; i < this->colNum_; ++i) {
-                this->data_[j][i] = (i > lst_row_it->size()) ? 0 : *(lst_row_it->begin() + i); // fill with zeroes for the incomplete initializer_lists
+                this->data_[j][i] = (i > lst_row_it->size()) ? 0 : *(lst_row_it->begin() + i); // fill with zeroes for the smaller nested lists
              }
              ++lst_row_it;
           }
@@ -109,11 +109,11 @@ class Matrix {
 int main() {
 
    Matrix<int> mat1 = {{1,1}, 
-                  {1,1,1},
-                  {1}};
+                       {1,1,1},
+                       {1}};
    Matrix<int> mat2 = {{1,1,1},
-                  {1,1,1},
-                  {1,1,1}};
+                       {1,1,1},
+                       {1,1,1}};
 
    cout << "mat1:" << endl;
    mat1.print();
@@ -121,7 +121,7 @@ int main() {
    mat2.print();
 
    Matrix<int> mat3; // default constructor
-   mat3 = {{1,2,3}, {4,5,6}, {7,8,9}}; // overload of the operator=(initializer_list<initializer_list<int>>)
+   mat3 = {{1,2,3}, {4,5,6}, {7,8,9}}; // operator=(initializer_list<initializer_list<int>>)
 
    Matrix<int> mat4 = mat1 * mat2;
    cout << "Multiplication of mat1 and mat2: " << endl;
