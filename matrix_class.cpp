@@ -24,6 +24,8 @@ class Matrix {
           for(auto& row: this->data_) // assign 0 to each element of the matrix
              for(auto& element: row)
                 element = (T)0; // statically cast to type T
+          this->rowNum_ = rowNum;
+          this->colNum_ = colNum;
        };
        Matrix(initializer_list<initializer_list<T>> lst) { // parametrized constructor #2
           // find the longest nested initializer_list
