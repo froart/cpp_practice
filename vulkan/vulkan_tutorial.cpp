@@ -1,3 +1,5 @@
+#define VULKAN_HPP_NO_CONSTRUCTORS
+
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan.h>
 #include <glm/vec4.hpp>
@@ -23,7 +25,7 @@ class TriangleApplication {
    private:
       SDL2pp::Window* window_;
       SDL2pp::Renderer* renderer_;
-      VkInstance instance_;
+      vk::Instance instance_;
 
       void initWindow() {
          window_ = new SDL2pp::Window("My vulkan tutorial",
@@ -35,18 +37,14 @@ class TriangleApplication {
       }
 
       void createInstance() {
-         VkApplicationInfo appInfo{};
-         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-         appInfo.pApplicationName = "Hello triangle";
-         appInfo.applicationVersion = VK_MAKE_VERSION(1,0,0);
-         appInfo.pEngineName = "No Engine";
-         appInfo.engineVersion = VK_MAKE_VERSION(1,0,0);
-         appInfo.apiVersion = VK_API_VERSION_1_0;
-         VkInstanceCreateInfo createInfo{};
-         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-         createInfo.pApplicationInfo = &appInfo;
-         createInfo.enabledLayerCount = 0;
-         if(vkCreateInstance(&createInfo, nullptr, &instance_) != VK_SUCCESS)
+         vk::ApplicationInfo appInfo{ .pApplicationName = "Hello triangle",
+                                      .applicationVersion = VK_MAKE_VERSION(1,0,0),
+                                      .pEngineName = "No Engine",
+                                      .engineVersion = VK_MAKE_VERSION(1,0,0),
+                                      .apiVersion = VK_API_VERSION_1_0 };
+         vk::InstanceCreateInfo createInfo{ .pApplicationInfo = &appInfo,
+                                            .enabledLayerCount = 0};
+         if(vk::createInstance(&createInfo, nullptr, &instance_) != vk::Result::eSuccess)
             throw std::runtime_error("failed to create instance!");
       }
 
@@ -67,7 +65,6 @@ class TriangleApplication {
       }
 
       void cleanUp() {
-         VkDestroyInstance(instance_, nullptr);
          delete renderer_;
          delete window_;
       }
