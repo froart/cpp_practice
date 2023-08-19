@@ -7,11 +7,20 @@
 #include <iostream>
 #include <SDL2/SDL.h>
 #include <SDL2pp/SDL2pp.hh>
+#include <cstring>
 
 using namespace std;
 
-const int width = 640;
-const int height = 400;
+const int width = 800;
+const int height = 600;
+
+// Enabling validation layers
+const vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
+#ifdef NDEBUG
+const bool enableValidationLayers = false;
+#else
+const bool enableValidationLayers = true;
+#endif
 
 class TriangleApplication {
    public:
@@ -27,6 +36,25 @@ class TriangleApplication {
       SDL2pp::Renderer* renderer_;
       vk::Instance instance_;
 
+      bool checkValidationLayerSupport() {
+         unsigned int layerCount;
+         vk::enumerateInstanceLayerProperties(&layerCount, nullptr);
+         vector<vk::LayerProperties> availableLayers(layerCount);
+         vk::enumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+         for(const char* layerName : validationLayers) {
+            bool layerFound = false;
+            for(const auto& layerProperties : availableLayers) {
+               // TODO use string library compare
+               if(strcmp(layerName, layerProperties.layerName) == 0) {
+                  layerFound = true;
+                  break;
+               }
+            }
+            if(!layerFound) return false;
+         }
+         return true;
+      }
+
       void initWindow() {
          window_ = new SDL2pp::Window("My vulkan tutorial",
                                       SDL_WINDOWPOS_UNDEFINED, 
@@ -37,6 +65,8 @@ class TriangleApplication {
       }
 
       void createInstance() {
+         if(enableValidationLayers && !checkValidationLayerSupport())
+            throw runtime_error("Validation layers requested but not available");
          vk::ApplicationInfo appInfo{ .pApplicationName = "Hello triangle",
                                       .applicationVersion = VK_MAKE_VERSION(1,0,0),
                                       .pEngineName = "No Engine",
