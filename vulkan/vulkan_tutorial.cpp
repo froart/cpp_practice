@@ -15,7 +15,7 @@ const int width = 800;
 const int height = 600;
 
 // Enabling validation layers
-const vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
+const vector<string> validationLayers = { "VK_LAYER_KHRONOS_validation" };
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
@@ -41,11 +41,11 @@ class TriangleApplication {
          vk::enumerateInstanceLayerProperties(&layerCount, nullptr);
          vector<vk::LayerProperties> availableLayers(layerCount);
          vk::enumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-         for(const char* layerName : validationLayers) {
+         for(string layerName : validationLayers) {
             bool layerFound = false;
             for(const auto& layerProperties : availableLayers) {
                // TODO use string library compare
-               if(strcmp(layerName, layerProperties.layerName) == 0) {
+               if(layerName.compare(string(layerProperties.layerName)) == 0) {
                   layerFound = true;
                   break;
                }
