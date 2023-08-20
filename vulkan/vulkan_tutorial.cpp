@@ -15,7 +15,7 @@ const int width = 800;
 const int height = 600;
 
 // Enabling validation layers
-const vector<string> validationLayers = { "VK_LAYER_KHRONOS_validation" };
+const vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
@@ -41,11 +41,10 @@ class TriangleApplication {
          vk::enumerateInstanceLayerProperties(&layerCount, nullptr);
          vector<vk::LayerProperties> availableLayers(layerCount);
          vk::enumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-         for(string layerName : validationLayers) {
+         for(const char* layerName : validationLayers) {
             bool layerFound = false;
             for(const auto& layerProperties : availableLayers) {
-               // TODO use string library compare
-               if(layerName.compare(string(layerProperties.layerName)) == 0) {
+               if(strcmp(layerName, layerProperties.layerName) == 0) {
                   layerFound = true;
                   break;
                }
@@ -72,8 +71,11 @@ class TriangleApplication {
                                       .pEngineName = "No Engine",
                                       .engineVersion = VK_MAKE_VERSION(1,0,0),
                                       .apiVersion = VK_API_VERSION_1_0 };
-         vk::InstanceCreateInfo createInfo{ .pApplicationInfo = &appInfo,
-                                            .enabledLayerCount = 0};
+         vk::InstanceCreateInfo createInfo{ .pApplicationInfo = &appInfo };
+         if(enableValidationLayers) {
+            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+            createInfo.ppEnabledLayerNames = validationLayers.data();
+         } else createInfo.enabledLayerCount = 0;
          if(vk::createInstance(&createInfo, nullptr, &instance_) != vk::Result::eSuccess)
             throw std::runtime_error("failed to create instance!");
       }
