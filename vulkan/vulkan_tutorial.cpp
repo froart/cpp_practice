@@ -1,3 +1,4 @@
+// remove all union and structure constructors to use C++20 designated initializer feature
 #define VULKAN_HPP_NO_CONSTRUCTORS
 
 #include <vulkan/vulkan.hpp>
