@@ -86,24 +86,24 @@ class TriangleApplication {
          if(enableValidationLayers) {
             instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
             instanceCreateInfo.ppEnabledLayerNames = validationLayers.data(); // add validation layers
-         } else instanceCreateInfo.enabledLayerCount = 0;
+            // SETUP DEBUGGER
+            vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                                                                 vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                                                                 vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
+            vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags( vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                                                                vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                                                                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
+            vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo { .messageSeverity = severityFlags, 
+                                                                   .messageType = messageTypeFlags, 
+                                                                   .pfnUserCallback = nullptr /*debugCallback*/};
+                                                                   // FIXME debugCallback should be of a valid type
+            instanceCreateInfo.pNext = &debugCreateInfo; // Pass debugger info to the instance info
+         } else {
+            instanceCreateInfo.enabledLayerCount = 0;
+            instanceCreateInfo.pNext = nullptr;
+         }
          if(vk::createInstance(&instanceCreateInfo, nullptr, &instance_) != vk::Result::eSuccess) // creating instance
             throw std::runtime_error("failed to create instance!");
-         // SETUP DEBUGGER
-         if(enableValidationLayers) {
-            vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                                                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                                                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
-            vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags( vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                                                                  vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                                                                  vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
-            vk::DebugUtilsMessengerEXT debugUtilsMessenger = instance_.createDebugUtilsMessengerEXT(
-                                                                           vk::DebugUtilsMessengerCreateInfoEXT {
-                                                                              .messageSeverity = severityFlags, 
-                                                                              .messageType = messageTypeFlags, 
-                                                                              .pfnUserCallback = nullptr /*debugCallback*/});
-                                                                              // FIXME debugCallback should be of a valid type
-         }
       }
 
       void mainLoop() {
