@@ -23,115 +23,89 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-class TriangleApplication {
-   public:
-      void run() {
-         initWindow();
-         initVulkan();
-         mainLoop();
-         cleanUp();
-      }
-
-   private:
-      SDL2pp::Window* window_;
-      SDL2pp::Renderer* renderer_;
-      vk::Instance instance_;
-
-      bool checkValidationLayerSupport() {
-         unsigned int layerCount;
-         vk::enumerateInstanceLayerProperties(&layerCount, nullptr);
-         vector<vk::LayerProperties> availableLayers(layerCount);
-         vk::enumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-         for(const char* layerName : validationLayers) {
-            bool layerFound = false;
-            for(const auto& layerProperties : availableLayers) {
-               if(strcmp(layerName, layerProperties.layerName) == 0) {
-                  layerFound = true;
-                  break;
-               }
-            }
-            if(!layerFound) return false;
+bool checkValidationLayerSupport() {
+   unsigned int layerCount;
+   vk::enumerateInstanceLayerProperties(&layerCount, nullptr);
+   vector<vk::LayerProperties> availableLayers(layerCount);
+   vk::enumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+   for(const char* layerName : validationLayers) {
+      bool layerFound = false;
+      for(const auto& layerProperties : availableLayers) {
+         if(strcmp(layerName, layerProperties.layerName) == 0) {
+            layerFound = true;
+            break;
          }
-         return true;
       }
+      if(!layerFound) return false;
+   }
+   return true;
+}
     
-      static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-         vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-         vk::DebugUtilsMessageTypeFlagsEXT messageType,
-         const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
-         void* pUserData) {
-            cerr << "Validation layer: " << pCallbackData->pMessage << endl;
-            return VK_FALSE;
-      }
-    
-      void initWindow() {
-         window_ = new SDL2pp::Window("My vulkan tutorial",
-                                      SDL_WINDOWPOS_UNDEFINED, 
-                                      SDL_WINDOWPOS_UNDEFINED,
-                                      width, height,
-                                      SDL_WINDOW_SHOWN);
-         renderer_ = new SDL2pp::Renderer(*window_, -1, SDL_RENDERER_ACCELERATED);
-      }
+VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                              vk::DebugUtilsMessageTypeFlagsEXT messageType,
+                                              const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                              void* pUserData) {
+      cerr << "Validation layer: " << pCallbackData->pMessage << endl;
+      return VK_FALSE;
+}
 
-      void initVulkan() {
-         // CREATE INSTANCE
-         if(enableValidationLayers && !checkValidationLayerSupport()) // check if requested validation layers exist on the system
-            throw runtime_error("Validation layers requested but not available");
-         vk::ApplicationInfo appInfo{ .pApplicationName = "Hello triangle", // specifying application information
-                                      .applicationVersion = VK_MAKE_VERSION(1,0,0),
-                                      .pEngineName = "No Engine",
-                                      .engineVersion = VK_MAKE_VERSION(1,0,0),
-                                      .apiVersion = VK_API_VERSION_1_0 };
-         vk::InstanceCreateInfo instanceCreateInfo { .pApplicationInfo = &appInfo }; // specifying instance information
-         if(enableValidationLayers) {
-            instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            instanceCreateInfo.ppEnabledLayerNames = validationLayers.data(); // add validation layers
-            // SETUP DEBUGGER
-            vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                                                                 vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                                                                 vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
-            vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags( vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                                                                vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                                                                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
-            vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo { .messageSeverity = severityFlags, 
-                                                                   .messageType = messageTypeFlags, 
-                                                                   .pfnUserCallback = nullptr /*debugCallback*/};
-                                                                   // FIXME debugCallback should be of a valid type
-            instanceCreateInfo.pNext = &debugCreateInfo; // Pass debugger info to the instance info
-         } else {
-            instanceCreateInfo.enabledLayerCount = 0;
-            instanceCreateInfo.pNext = nullptr;
-         }
-         if(vk::createInstance(&instanceCreateInfo, nullptr, &instance_) != vk::Result::eSuccess) // creating instance
-            throw std::runtime_error("failed to create instance!");
-      }
+int main(int argc, char** argv) try {
 
-      void mainLoop() {
-         bool quit = false;
-         while(!quit) {
-            SDL_Event event;
-            SDL_PollEvent(&event);
-            if(event.type == SDL_QUIT || event.key.keysym.sym == SDLK_ESCAPE)
-               quit = true;
-            //updateFrameBuffer();
-            renderer_->Present();
-         }
-      }
+   // Creating SDL window
+   SDL2pp::Window window("My vulkan tutorial",
+                         SDL_WINDOWPOS_UNDEFINED, 
+                         SDL_WINDOWPOS_UNDEFINED,
+                         width, height,
+                         SDL_WINDOW_SHOWN);
+   SDL2pp::Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-      void cleanUp() {
-         delete renderer_;
-         delete window_;
-      }
-};
+   // Initializing Vulkan
+   if(enableValidationLayers && !checkValidationLayerSupport()) // check if requested validation layers exist on the system
+      throw runtime_error("Validation layers requested but not available");
+   vk::ApplicationInfo appInfo{ .pApplicationName = "Hello triangle", // specifying application information
+                                .applicationVersion = VK_MAKE_VERSION(1,0,0),
+                                .pEngineName = "No Engine",
+                                .engineVersion = VK_MAKE_VERSION(1,0,0),
+                                .apiVersion = VK_API_VERSION_1_0 };
+   vk::InstanceCreateInfo instanceCreateInfo { .pApplicationInfo = &appInfo }; // specifying instance information
+   if(enableValidationLayers) {
+      instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+      instanceCreateInfo.ppEnabledLayerNames = validationLayers.data(); // add validation layers
+      // SETUP DEBUGGER
+      vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                                                           vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                                                           vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
+      vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags( vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                                                          vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                                                          vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
+      vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo { .messageSeverity = severityFlags, 
+                                                             .messageType = messageTypeFlags, 
+                                                             .pfnUserCallback = nullptr /*debugCallback*/};
+                                                             // FIXME debugCallback should be of a valid type
+      instanceCreateInfo.pNext = &debugCreateInfo; // Pass debugger info to the instance info
+   } else {
+      instanceCreateInfo.enabledLayerCount = 0;
+      instanceCreateInfo.pNext = nullptr;
+   }
+   vk::Instance instance;
+   if(vk::createInstance(&instanceCreateInfo, nullptr, &instance) != vk::Result::eSuccess) // creating instance
+      throw std::runtime_error("failed to create instance!");
 
-int main() try {
-   TriangleApplication app;
-// glm::mat4 matrix;
-// glm::vec4 vec;
-// auto test = matrix * vec;
-   app.run();
+   // Main loop
+   bool quit = false;
+   while(!quit) {
+      SDL_Event event;
+      SDL_PollEvent(&event);
+      if(event.type == SDL_QUIT || event.key.keysym.sym == SDLK_ESCAPE)
+         quit = true;
+      renderer.Present();
+   }
+
    return EXIT_SUCCESS;
+
 } catch(const exception& e) {
+
    cerr << e.what() << endl;
+
    return EXIT_FAILURE;
 }
