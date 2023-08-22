@@ -95,31 +95,31 @@ int main(int argc, char** argv) try {
 */
 #endif
 
-   vk::PhysicalDevice physicalDevice = instance.enumeratePhysicalDevices().front();
-   vk::PhysicalDeviceProperties physicalDeviceProperties = physicalDevice.getProperties();
+   vk::PhysicalDevice physicalDevice = instance.enumeratePhysicalDevices().front(); // Choose the first found physical device
+   vk::PhysicalDeviceProperties physicalDeviceProperties = physicalDevice.getProperties(); // and retrieve its properties
 
-   cout << "Chosen Physical Device Information:" << endl;
+   cout << "Chosen Physical Device Information:" << endl; // print chosen physical device's properties
    cout << "Device Name: " << physicalDeviceProperties.deviceName << endl;
    cout << "API Version: " << VK_VERSION_MAJOR(physicalDeviceProperties.apiVersion) << "."
-        << VK_VERSION_MINOR(physicalDeviceProperties.apiVersion) << "."
-        << VK_VERSION_PATCH(physicalDeviceProperties.apiVersion) << endl;
+                           << VK_VERSION_MINOR(physicalDeviceProperties.apiVersion) << "."
+                           << VK_VERSION_PATCH(physicalDeviceProperties.apiVersion) << endl;
 
-   vk::PhysicalDeviceFeatures physicalDeviceFeatures = physicalDevice.getFeatures(); 
+   vk::PhysicalDeviceFeatures physicalDeviceFeatures = physicalDevice.getFeatures(); // Retrieve physical device Features
    
-   if(physicalDeviceProperties.deviceType != vk::PhysicalDeviceType::eDiscreteGpu)
+   if(physicalDeviceProperties.deviceType != vk::PhysicalDeviceType::eDiscreteGpu) // Warn if a chosen device is not a GPU
      cerr << "Chosen physical device is not a descrete GPU!" << endl;
 
-   if(!physicalDeviceFeatures.geometryShader)
-     cerr << "Chosen physical device doesn't have a geometry shader!" << endl;
+   if(!physicalDeviceFeatures.geometryShader) // Geometry Shader is a required feature
+      throw runtime_error("Chosen physical device doesn't have a geometry shader!");
 
-   // Main loop
+   // Main Rendering Loop
    bool quit = false;
-   while(!quit) {
+   while(!quit) { 
       SDL_Event event;
       SDL_PollEvent(&event);
-      if(event.type == SDL_QUIT || event.key.keysym.sym == SDLK_ESCAPE)
+      if(event.type == SDL_QUIT || event.key.keysym.sym == SDLK_ESCAPE) // if ESC is hit
          quit = true;
-      renderer.Present();
+      renderer.Present(); // update Video Frame Buffer
    }
 
    return EXIT_SUCCESS;
