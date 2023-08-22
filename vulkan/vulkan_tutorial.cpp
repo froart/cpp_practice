@@ -95,6 +95,14 @@ int main(int argc, char** argv) try {
 */
 #endif
 
+   vk::PhysicalDevice physicalDevice = instance.enumeratePhysicalDevices().front();
+   vk::PhysicalDeviceProperties physicalDeviceProperties = physicalDevice.getProperties();
+
+    std::cout << "Chosen Physical Device Information:" << std::endl;
+    std::cout << "Device Name: " << physicalDeviceProperties.deviceName << std::endl;
+    std::cout << "API Version: " << VK_VERSION_MAJOR(physicalDeviceProperties.apiVersion) << "."
+              << VK_VERSION_MINOR(physicalDeviceProperties.apiVersion) << "."
+              << VK_VERSION_PATCH(physicalDeviceProperties.apiVersion) << std::endl;
    // Main loop
    bool quit = false;
    while(!quit) {
