@@ -4,6 +4,7 @@
 #include <glm/mat4x4.hpp>
 #include <iostream>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_vulkan.h>
 #include <SDL2pp/SDL2pp.hh>
 #include <cstring>
 #include <vector>
@@ -123,6 +124,15 @@ int main(int argc, char** argv) try {
    float queuePriority = 0.0f;
    vk::DeviceQueueCreateInfo deviceQueueCreateInfo( vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(graphicsQueueFamilyIndex), 1, &queuePriority );
    vk::Device device = physicalDevice.createDevice( vk::DeviceCreateInfo ( vk::DeviceCreateFlags(), deviceQueueCreateInfo ) );
+
+   vk::SurfaceKHR surface;    
+   {
+      VkSurfaceKHR _surface;
+      SDL_Vulkan_CreateSurface( window.Get(), static_cast<VkInstance>(instance), &_surface ); // bind Vulkan Surface to SDL Window
+      surface = vk::SurfaceKHR( _surface );
+   }
+   if(!&surface)
+      throw runtime_error("Surface cannot be created!");
 
    // Main Rendering Loop
    bool quit = false;
