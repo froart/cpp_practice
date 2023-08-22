@@ -1,6 +1,3 @@
-// remove all union and structure constructors to use C++20 designated initializer feature
-#define VULKAN_HPP_NO_CONSTRUCTORS
-
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan.h>
 #include <glm/vec4.hpp>
@@ -16,13 +13,28 @@ const int width = 800;
 const int height = 600;
 
 // Enabling validation layers
+#ifndef NDEBUG
 const vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
-#ifdef NDEBUG
-const bool enableValidationLayers = false;
-#else
 const bool enableValidationLayers = true;
+#else
+const bool enableValidationLayers = false;
 #endif
 
+#ifndef NDEBUG
+//PFN_vkCreateDebugUtilsMessengerEXT  pfnVkCreateDebugUtilsMessengerEXT;
+//VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugUtilsMessengerEXT( VkInstance                                 instance,
+//                                                             const VkDebugUtilsMessengerCreateInfoEXT * pCreateInfo,
+//                                                             const VkAllocationCallbacks *              pAllocator,
+//                                                             VkDebugUtilsMessengerEXT *                 pMessenger ) {
+// return pfnVkCreateDebugUtilsMessengerEXT( instance, pCreateInfo, pAllocator, pMessenger );
+//}
+//VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+//                                              VkDebugUtilsMessageTypeFlagsEXT messageType,
+//                                              VkDebugUtilsMessengerCallbackDataEXT const * pCallbackData,
+//                                              void* pUserData) {
+//      cerr << "Validation layer: " << pCallbackData->pMessage << endl;
+//      return VK_FALSE;
+//}
 bool checkValidationLayerSupport() {
    unsigned int layerCount;
    vk::enumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -40,14 +52,7 @@ bool checkValidationLayerSupport() {
    }
    return true;
 }
-    
-VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                              vk::DebugUtilsMessageTypeFlagsEXT messageType,
-                                              const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                              void* pUserData) {
-      cerr << "Validation layer: " << pCallbackData->pMessage << endl;
-      return VK_FALSE;
-}
+#endif
 
 int main(int argc, char** argv) try {
 
@@ -60,36 +65,35 @@ int main(int argc, char** argv) try {
    SDL2pp::Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
    // Initializing Vulkan
+#ifndef NDEBUG
    if(enableValidationLayers && !checkValidationLayerSupport()) // check if requested validation layers exist on the system
       throw runtime_error("Validation layers requested but not available");
-   vk::ApplicationInfo appInfo{ .pApplicationName = "Hello triangle", // specifying application information
-                                .applicationVersion = VK_MAKE_VERSION(1,0,0),
-                                .pEngineName = "No Engine",
-                                .engineVersion = VK_MAKE_VERSION(1,0,0),
-                                .apiVersion = VK_API_VERSION_1_0 };
-   vk::InstanceCreateInfo instanceCreateInfo { .pApplicationInfo = &appInfo }; // specifying instance information
-   if(enableValidationLayers) {
-      instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-      instanceCreateInfo.ppEnabledLayerNames = validationLayers.data(); // add validation layers
-      // SETUP DEBUGGER
-      vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                                                           vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                                                           vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
-      vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags( vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                                                          vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                                                          vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
-      vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo { .messageSeverity = severityFlags, 
-                                                             .messageType = messageTypeFlags, 
-                                                             .pfnUserCallback = nullptr /*debugCallback*/};
-                                                             // FIXME debugCallback should be of a valid type
-      instanceCreateInfo.pNext = &debugCreateInfo; // Pass debugger info to the instance info
-   } else {
-      instanceCreateInfo.enabledLayerCount = 0;
-      instanceCreateInfo.pNext = nullptr;
-   }
-   vk::Instance instance;
-   if(vk::createInstance(&instanceCreateInfo, nullptr, &instance) != vk::Result::eSuccess) // creating instance
-      throw std::runtime_error("failed to create instance!");
+#endif
+
+   vk::ApplicationInfo appInfo ( "Hello triangle", VK_MAKE_VERSION(1,0,0), "No Engine", 1, VK_MAKE_VERSION(1,0,0) );
+   vk::InstanceCreateInfo instanceCreateInfo ( {}, &appInfo );
+
+#ifndef NDEBUG
+   instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+   instanceCreateInfo.ppEnabledLayerNames = validationLayers.data(); // add validation layers
+#else
+// instanceCreateInfo.enabledLayerCount = 0;
+// instanceCreateInfo.pNext = nullptr;
+#endif
+
+   vk::Instance instance = vk::createInstance ( instanceCreateInfo ); ;
+
+#ifndef NDEBUG
+/* FIXME the function vkCreateDebugUtilsMessengerEXT throws a segfault
+   vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                                                        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                                                        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
+   vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags( vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                                                       vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                                                       vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
+   vk::DebugUtilsMessengerEXT debugUtilsMessenger = instance.createDebugUtilsMessengerEXT (vk::DebugUtilsMessengerCreateInfoEXT ( {}, severityFlags, messageTypeFlags, &debugCallback) ); 
+*/
+#endif
 
    // Main loop
    bool quit = false;
