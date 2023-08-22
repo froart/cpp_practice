@@ -6,6 +6,8 @@
 #include <SDL2/SDL.h>
 #include <SDL2pp/SDL2pp.hh>
 #include <cstring>
+#include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -111,6 +113,16 @@ int main(int argc, char** argv) try {
 
    if(!physicalDeviceFeatures.geometryShader) // Geometry Shader is a required feature
       throw runtime_error("Chosen physical device doesn't have a geometry shader!");
+
+   vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties(); // find eGraphics queue
+   auto propertyIt = find_if(queueFamilyProperties.begin(), queueFamilyProperties.end(),
+                             [](vk::QueueFamilyProperties const & qfp) { return qfp.queueFlags & vk::QueueFlagBits::eGraphics; } );
+
+   size_t graphicsQueueFamilyIndex = distance(queueFamilyProperties.begin(), propertyIt);
+
+   float queuePriority = 0.0f;
+   vk::DeviceQueueCreateInfo deviceQueueCreateInfo( vk::DeviceQueueCreateFlags(), static_cast<uint32_t>( graphicsQueueFamilyIndex), 1, &queuePriority );
+   vk::Device device = physicalDevice.createDevice( vk::DeviceCreateInfo ( vk::DeviceCreateFlags(), deviceQueueCreateInfo ) );
 
    // Main Rendering Loop
    bool quit = false;
