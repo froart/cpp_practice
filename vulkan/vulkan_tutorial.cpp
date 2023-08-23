@@ -17,7 +17,8 @@ const int width = 800;
 const int height = 600;
 
 // Enabling extensions
-vector<const char*> extensionNames = { VK_KHR_SURFACE_EXTENSION_NAME };
+vector<const char*> instanceExtensions = { VK_KHR_SURFACE_EXTENSION_NAME };
+vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 // Enabling validation layers
 #ifndef NDEBUG
@@ -92,14 +93,14 @@ int main(int argc, char** argv) try {
    SDL_Vulkan_GetInstanceExtensions(window.Get(), &count, SDL_extensions_required.data());
 #endif
    for(int i = 0; i < count; ++i) // fill the Vulkan extension list with the required SDL extensions
-      extensionNames.push_back(SDL_extensions_required[i]);
+      instanceExtensions.push_back(SDL_extensions_required[i]);
 
    // Creating Vulkan instance
    vk::ApplicationInfo appInfo ( "Hello triangle", VK_MAKE_VERSION(1,0,0), "No Engine", 1, VK_MAKE_VERSION(1,0,0) );
 #ifndef NDEBUG
-   vk::InstanceCreateInfo instanceCreateInfo ( {}, &appInfo, validationLayers, extensionNames );
+   vk::InstanceCreateInfo instanceCreateInfo ( {}, &appInfo, validationLayers, instanceExtensions );
 #else
-   vk::InstanceCreateInfo instanceCreateInfo ( {}, &appInfo, {}, extensionNames );
+   vk::InstanceCreateInfo instanceCreateInfo ( {}, &appInfo, {}, instanceExtensions );
 #endif
    vk::Instance instance = vk::createInstance ( instanceCreateInfo ); ;
 
@@ -149,13 +150,15 @@ int main(int argc, char** argv) try {
    size_t graphicsQueueFamilyIndex = distance(queueFamilyProperties.begin(), propertyIt);
    size_t presentQueueFamilyIndex = physicalDevice.getSurfaceSupportKHR( static_cast<uint32_t>( graphicsQueueFamilyIndex ), surface ) // check if the index has a surface support
                                     ? graphicsQueueFamilyIndex : queueFamilyProperties.size();
+#ifndef NDEBUG
    assert( presentQueueFamilyIndex == graphicsQueueFamilyIndex );
+#endif
 
    // Create a logical device
    float queuePriority = 0.0f;
    vk::DeviceQueueCreateInfo deviceQueueCreateInfo( vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(graphicsQueueFamilyIndex), 1, &queuePriority );
    vk::Device device = physicalDevice.createDevice( vk::DeviceCreateInfo ( vk::DeviceCreateFlags(), deviceQueueCreateInfo ) );
-
+   
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
