@@ -159,6 +159,53 @@ int main(int argc, char** argv) try {
    vk::DeviceQueueCreateInfo deviceQueueCreateInfo( vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(graphicsQueueFamilyIndex), 1, &queuePriority );
    vk::Device device = physicalDevice.createDevice( vk::DeviceCreateInfo ( vk::DeviceCreateFlags(), deviceQueueCreateInfo ) );
    
+   // Get supported formats
+   vector<vk::SurfaceFormatKHR> formats = physicalDevice.getSurfaceFormatsKHR( surface );
+#ifndef NDEBUG
+   assert( !formats.empty() );
+#endif
+   vk::Format format = ( formats[0] == vk::Format::eUndefined ) ? vk::Format::eB8G8R8A8Unorm : formats[0].format;
+
+   vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR( surface );
+   vk::Extent2D swapchainExtent;
+   if( surfaceCapabilities.currentExtent.width == numeric_limits<uint32_t>::max() ) { // if the furface resolution is underfined
+      //... set it to the sizes of the image
+      swapchainExtent.width = clamp( static_cast<uint32_t>(width), surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width );
+      swapchainExtent.height = clamp( static_cast<uint32_t>(height), surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height );
+   } else {
+     // if defined, the swapchain resolution must match it
+     swapchainExtent = surfaceCapabilities.currentExtent;
+   }
+
+   // set to not apply any tranformation upon image
+   vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
+   vk::SurfaceTransformFlagBitsKHR preTransform = ( surfaceCapabilities.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity )
+                                                  ? vk::SurfaceTransformFlagBitsKHR::eIdentity
+                                                  : surfaceCapabilities.currentTransform;
+   
+   // set to not blend with other windows
+   vk::CompositeAlphaFlagBitsKHR compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+   
+   // defining the swapchain create information 
+   vk::SwapchainCreateInfoKHR swapchainCreateInfo( vk::SwapchainCreateFlagsKHR(),
+                                                   surface,
+                                                   // define the number of image in the swapchain
+                                                   clamp( 3u, surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount ),
+                                                   format,
+                                                   vk::ColorSpaceKHR::eSrgbNonlinear,
+                                                   swapchainExtent,
+                                                   1,
+                                                   vk::ImageUsageFlagBits::eColorAttachment,
+                                                   vk::SharingMode::eExclusive,
+                                                   {},
+                                                   preTransform,
+                                                   compositeAlpha,
+                                                   swapchainPresentMode,
+                                                   true,
+                                                   nullptr );
+
+   vk::SwapchainKHR swapchain = device.createSwapchainKHR ( swapchainCreateInfo );
+                                                  
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
