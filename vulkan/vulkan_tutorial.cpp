@@ -179,6 +179,10 @@ int main(int argc, char** argv) try {
       swapchainExtent = surfaceCapabilities.currentExtent;
    }
 
+#ifndef NDEBUG
+   cout << "Surface capabilities image count: min: " << surfaceCapabilities.minImageCount << ", max: " << surfaceCapabilities.maxImageCount << endl;
+#endif
+
    // set to not apply any tranformation upon image
    vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
    vk::SurfaceTransformFlagBitsKHR preTransform = ( surfaceCapabilities.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity )
@@ -192,7 +196,9 @@ int main(int argc, char** argv) try {
    vk::SwapchainCreateInfoKHR swapchainCreateInfo( vk::SwapchainCreateFlagsKHR(),
                                                    surface,
                                                    // define the number of image in the swapchain
-                                                   clamp( static_cast<uint32_t>(3), surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount ),
+                                                   // FIXME for some reason surfaceCapabilities.maxImageCount == 0
+                                                   //clamp( static_cast<uint32_t>(3), surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount ),
+                                                   3u,
                                                    format,
                                                    vk::ColorSpaceKHR::eSrgbNonlinear,
                                                    swapchainExtent,
