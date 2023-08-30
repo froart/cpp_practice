@@ -157,15 +157,17 @@ int main(int argc, char** argv) try {
    // Create a logical device
    float queuePriority = 0.0f;
    vk::DeviceQueueCreateInfo deviceQueueCreateInfo( vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(graphicsQueueFamilyIndex), 1, &queuePriority );
-   vk::Device device = physicalDevice.createDevice( vk::DeviceCreateInfo ( vk::DeviceCreateFlags(), deviceQueueCreateInfo ) );
+
+   vk::DeviceCreateInfo deviceCreateInfo(vk::DeviceCreateFlags(), deviceQueueCreateInfo, {}, deviceExtensions);
+   vk::Device device = physicalDevice.createDevice( deviceCreateInfo );
    
    // Get supported formats
    vector<vk::SurfaceFormatKHR> formats = physicalDevice.getSurfaceFormatsKHR( surface );
 #ifndef NDEBUG
    assert( !formats.empty() );
 #endif
-   vk::Format format = ( formats[0] == vk::Format::eUndefined ) ? vk::Format::eB8G8R8A8Unorm : formats[0].format;
 
+   vk::Format format = ( formats[0] == vk::Format::eUndefined ) ? vk::Format::eB8G8R8A8Unorm : formats[0].format;
    vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR( surface );
    vk::Extent2D swapchainExtent;
    if( surfaceCapabilities.currentExtent.width == numeric_limits<uint32_t>::max() ) { // if the furface resolution is underfined
@@ -173,8 +175,8 @@ int main(int argc, char** argv) try {
       swapchainExtent.width = clamp( static_cast<uint32_t>(width), surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width );
       swapchainExtent.height = clamp( static_cast<uint32_t>(height), surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height );
    } else {
-     // if defined, the swapchain resolution must match it
-     swapchainExtent = surfaceCapabilities.currentExtent;
+      // if defined, the swapchain resolution must match it
+      swapchainExtent = surfaceCapabilities.currentExtent;
    }
 
    // set to not apply any tranformation upon image
@@ -190,7 +192,7 @@ int main(int argc, char** argv) try {
    vk::SwapchainCreateInfoKHR swapchainCreateInfo( vk::SwapchainCreateFlagsKHR(),
                                                    surface,
                                                    // define the number of image in the swapchain
-                                                   clamp( 3u, surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount ),
+                                                   clamp( static_cast<uint32_t>(3), surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount ),
                                                    format,
                                                    vk::ColorSpaceKHR::eSrgbNonlinear,
                                                    swapchainExtent,
