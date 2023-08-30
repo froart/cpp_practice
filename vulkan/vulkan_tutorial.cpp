@@ -218,6 +218,7 @@ int main(int argc, char** argv) try {
    }
 
    // cleanup 
+   device.destroySwapchainKHR( swapchain );
    instance.destroySurfaceKHR( surface );
    device.destroy();
 #ifndef NDEBUG
