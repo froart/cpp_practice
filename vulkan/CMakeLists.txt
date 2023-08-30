@@ -5,13 +5,15 @@ find_package(SDL2pp REQUIRED)
 find_package(glm REQUIRED)
 find_package(Vulkan REQUIRED)
 add_executable(${PROJECT_NAME} vulkan_tutorial.cpp)
-target_compile_options(${PROJECT_NAME} 
-                       PUBLIC -fsanitize=leak -g -Wall -Wextra -O2)
 if(NOT Debug)
    message("Configuring Makefile in NON-debugging mode")
    target_compile_definitions(${PROJECT_NAME} PRIVATE NDEBUG)
+   target_compile_options(${PROJECT_NAME} 
+                         PUBLIC -O2)
 else()
    message("Configuring Makefile in debugging mode")
+   target_compile_options(${PROJECT_NAME} 
+                          PUBLIC -fsanitize=leak -g -Wall -Wextra)
 endif()
 target_link_libraries(${PROJECT_NAME} 
                       PRIVATE SDL2pp::SDL2pp 
