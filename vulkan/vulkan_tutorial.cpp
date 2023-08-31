@@ -136,7 +136,7 @@ int main(int argc, char** argv) try {
                            << VK_VERSION_MINOR(physicalDeviceProperties.apiVersion) << "."
                            << VK_VERSION_PATCH(physicalDeviceProperties.apiVersion) << endl;
    if(physicalDeviceProperties.deviceType != vk::PhysicalDeviceType::eDiscreteGpu) // Warn if a chosen device is not a GPU
-     cerr << "Chosen physical device is not a descrete GPU!" << endl;
+      cerr << "Chosen physical device is not a descrete GPU!" << endl;
 
    // Query the physical device features
    vk::PhysicalDeviceFeatures physicalDeviceFeatures = physicalDevice.getFeatures(); // Retrieve physical device Features
@@ -214,6 +214,15 @@ int main(int argc, char** argv) try {
 
    vk::SwapchainKHR swapchain = device.createSwapchainKHR ( swapchainCreateInfo );
                                                   
+   vector<vk::Image> swapchainImages = device.getSwapchainImagesKHR( swapchain );
+   vector<vk::ImageView> imageViews;
+   imageViews.reserve( swapchainImages.size() );
+   vk::ImageViewCreateInfo imageViewCreateInfo( {}, {}, vk::ImageViewType::e2D, format, {}, { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } );
+   for ( auto image : swapchainImages ) {
+      imageViewCreateInfo.image = image;
+      imageViews.push_back( device.createImageView( imageViewCreateInfo ) );
+   }
+
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
@@ -224,6 +233,8 @@ int main(int argc, char** argv) try {
    }
 
    // cleanup 
+   for( auto & imageView : imageViews )
+      device.destroyImageView( imageView );
    device.destroySwapchainKHR( swapchain );
    instance.destroySurfaceKHR( surface );
    device.destroy();
