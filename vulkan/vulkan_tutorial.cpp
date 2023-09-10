@@ -10,6 +10,10 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
+#include <glslang/SPIRV/GlslangToSpv.h>
+#include <glslang/Public/ShaderLang.h>
+#include <fstream>
+#include "default_resources.hpp"
 
 using namespace std;
 
@@ -222,6 +226,29 @@ int main(int argc, char** argv) try {
       imageViewCreateInfo.image = image;
       imageViews.push_back( device.createImageView( imageViewCreateInfo ) );
    }
+
+   // Compile the GLSL shaders
+   glslang::InitializeProcess();
+   vector<unsigned int> vertexShaderSPV;
+   ifstream vertexShaderFile("../shader.vert", ios::in);
+   string vertexShaderString((istreambuf_iterator<char>(vertexShaderFile)), istreambuf_iterator<char>());
+   const char* shaderStrings[1];
+   shaderStrings[0] = vertexShaderString.data();
+   glslang::TShader shader( EShLangVertex );
+   shader.setStrings( shaderStrings, 1 );
+   EShMessages messages = (EShMessages) ( EShMsgSpvRules | EShMsgVulkanRules );
+   TBuiltInResource Resources = InitResources();      
+   if( !shader.parse( &Resources, 100, false, messages ) ) {
+      cout << shader.getInfoLog() << endl << shader.getInfoDebugLog() << endl;
+   }
+   glslang::TProgram program;
+   program.addShader( &shader );
+   if( !program.link( messages ) ) {
+      cout << shader.getInfoLog() << endl << shader.getInfoDebugLog() << endl;
+      fflush( stdout );
+      return -1;
+   }
+   glslang::GlslangToSpv( *program.getIntermediate( EShLangVertex ), vertexShaderSPV );
 
    // Main Rendering Loop
    bool quit = false;
