@@ -9,6 +9,7 @@
 #include <cstring>
 #include <cassert>
 #include <vector>
+#include <array>
 #include <algorithm>
 #include <glslang/SPIRV/GlslangToSpv.h>
 #include <glslang/Public/ShaderLang.h>
@@ -302,11 +303,27 @@ int main(int argc, char** argv) try {
    vk::ShaderModuleCreateInfo fragmentShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), fragmentShaderSPV);  
    vk::ShaderModule fragmentShaderModule = device.createShaderModule( fragmentShaderModuleCreateInfo );
    glslang::FinalizeProcess();
+
    //  Creation of Pipelline Shader Stages
    array<vk::PipelineShaderStageCreateInfo, 2> pipelineShaderStageCreateInfos = {
     vk::PipelineShaderStageCreateInfo( vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eVertex, vertexShaderModule, "main"),
     vk::PipelineShaderStageCreateInfo( vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eFragment, fragmentShaderModule, "main")
   };
+
+   // Dynamic states of the pipeline
+   array<vk::DynamicState, 2> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor};
+   vk::PipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo( vk::PipelineDynamicStateCreateFlags(), dynamicStates );
+
+   // Vertex data format setup
+   vk::VertexInputBindingDescription vertexInputBindingDescription( 0, sizeof(float) * 7); // 3 for coordinate, 4 for color
+   array<vk::VertexInputAttributeDescription, 2> vertexInputAttributeDescriptions = {
+      vk::VertexInputAttributeDescription( 0, 0, vk::Format::eR32G32B32A32Sfloat, 0 ),
+      vk::VertexInputAttributeDescription( 1, 0, vk::Format::eR32G32B32A32Sfloat, 12 ),
+  };
+  vk::PipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo( vk::PipelineVertexInputStateCreateFlags(),
+     vertexInputBindingDescription,
+     vertexInputAttributeDescriptions
+   );
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
