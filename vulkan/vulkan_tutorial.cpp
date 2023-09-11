@@ -66,6 +66,46 @@ bool checkValidationLayerSupport() {
 }
 #endif
 
+EShLanguage translateShaderStage(const vk::ShaderStageFlagBits shaderType) {
+   switch( shaderType ) {
+      case vk::ShaderStageFlagBits::eVertex: return EShLangVertex;
+      case vk::ShaderStageFlagBits::eFragment: return EShLangFragment;
+      default: cout << "Unknown stage shader"; return EShLangVertex;
+   }
+}
+
+bool GLSLtoSPV( const vk::ShaderStageFlagBits shaderType, string const & glslShader, vector<unsigned int> & spvShader ) {
+   
+   EShLanguage stage = translateShaderStage( shaderType );
+
+   const char* shaderStrings[1];
+   shaderStrings[0] = glslShader.data();
+
+   glslang::TShader shader( stage );
+   shader.setStrings( shaderStrings, 1 );
+
+   TBuiltInResource Resources = InitResources();      
+
+   EShMessages messages = (EShMessages) ( EShMsgSpvRules | EShMsgVulkanRules );
+
+   if( !shader.parse( &Resources, 100, false, messages ) ) {
+      cerr << shader.getInfoLog() << endl << shader.getInfoDebugLog() << endl;
+      return false;
+   }
+
+   glslang::TProgram program;
+   program.addShader( &shader );
+
+   if( !program.link( messages ) ) {
+      cout << shader.getInfoLog() << endl << shader.getInfoDebugLog() << endl;
+      fflush( stdout );
+      return false;
+   }
+
+   glslang::GlslangToSpv( *program.getIntermediate( stage ), spvShader );
+   return true; 
+}
+
 int main(int argc, char** argv) try {
 
    // Creating SDL window
@@ -229,37 +269,61 @@ int main(int argc, char** argv) try {
 
    // Compile the GLSL shaders
    glslang::InitializeProcess();
-   vector<unsigned int> vertexShaderSPV;
+   // Creating vertex shader module
+   vector<unsigned int> vertexShaderSPV; // actual SPIR-V bytecode
+   // File to string
    ifstream vertexShaderFile("../shader.vert", ios::in);
    string vertexShaderString((istreambuf_iterator<char>(vertexShaderFile)), istreambuf_iterator<char>());
-   const char* shaderStrings[1];
-   shaderStrings[0] = vertexShaderString.data();
-   glslang::TShader shader( EShLangVertex );
-   shader.setStrings( shaderStrings, 1 );
-   EShMessages messages = (EShMessages) ( EShMsgSpvRules | EShMsgVulkanRules );
-   TBuiltInResource Resources = InitResources();      
-   if( !shader.parse( &Resources, 100, false, messages ) ) {
-      cout << shader.getInfoLog() << endl << shader.getInfoDebugLog() << endl;
-   }
-   glslang::TProgram program;
-   program.addShader( &shader );
-   if( !program.link( messages ) ) {
-      cout << shader.getInfoLog() << endl << shader.getInfoDebugLog() << endl;
-      fflush( stdout );
-      return -1;
-   }
-   glslang::GlslangToSpv( *program.getIntermediate( EShLangVertex ), vertexShaderSPV );
+
+#ifndef NDEBUG
+  assert(
+#endif
+
+   GLSLtoSPV(vk::ShaderStageFlagBits::eVertex, vertexShaderString, vertexShaderSPV )
+
+#ifndef NDEBUG
+  );
+#else
+   ;
+#endif
+
+   vk::ShaderModuleCreateInfo vertexShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), vertexShaderSPV);
+   vk::ShaderModule vertexShaderModule = device.createShaderModule( vertexShaderModuleCreateInfo );
+
+   // Creating fragment shader module
+   vector<unsigned int> fragmentShaderSPV; // actual SPIR-V bytecode
+   // File to string
+   ifstream fragmentShaderFile("../shader.frag", ios::in);
+   string fragmentShaderString((istreambuf_iterator<char>(fragmentShaderFile)), istreambuf_iterator<char>());
+
+#ifndef NDEBUG
+  assert(
+#endif
+
+   GLSLtoSPV( vk::ShaderStageFlagBits::eFragment, fragmentShaderString, fragmentShaderSPV )
+
+#ifndef NDEBUG
+  );
+#else
+  ;
+#endif
+
+   vk::ShaderModuleCreateInfo fragmentShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), fragmentShaderSPV);  
+   vk::ShaderModule fragmentShaderModule = device.createShaderModule( fragmentShaderModuleCreateInfo );
 
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
       SDL_Event event;
       SDL_PollEvent(&event);
-      if(event.type == SDL_QUIT || event.key.keysym.sym == SDLK_ESCAPE) // if ESC is hit
+      if(event.type == SDL_QUIT || event.key.keysym.sym == SDLK_ESCAPE)          // if ESC is hit
          quit = true;
    }
 
    // cleanup 
+  glslang::FinalizeProcess();
+  device.destroyShaderModule( fragmentShaderModule );
+  device.destroyShaderModule( vertexShaderModule );
    for( auto & imageView : imageViews )
       device.destroyImageView( imageView );
    device.destroySwapchainKHR( swapchain );
