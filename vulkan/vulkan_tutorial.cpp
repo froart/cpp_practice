@@ -274,43 +274,39 @@ int main(int argc, char** argv) try {
    // File to string
    ifstream vertexShaderFile("../shader.vert", ios::in);
    string vertexShaderString((istreambuf_iterator<char>(vertexShaderFile)), istreambuf_iterator<char>());
-
 #ifndef NDEBUG
-  assert(
+   assert(
 #endif
-
    GLSLtoSPV(vk::ShaderStageFlagBits::eVertex, vertexShaderString, vertexShaderSPV )
-
 #ifndef NDEBUG
-  );
+   );
 #else
    ;
 #endif
-
    vk::ShaderModuleCreateInfo vertexShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), vertexShaderSPV);
    vk::ShaderModule vertexShaderModule = device.createShaderModule( vertexShaderModuleCreateInfo );
 
    // Creating fragment shader module
    vector<unsigned int> fragmentShaderSPV; // actual SPIR-V bytecode
-   // File to string
    ifstream fragmentShaderFile("../shader.frag", ios::in);
    string fragmentShaderString((istreambuf_iterator<char>(fragmentShaderFile)), istreambuf_iterator<char>());
-
 #ifndef NDEBUG
-  assert(
+   assert(
 #endif
-
    GLSLtoSPV( vk::ShaderStageFlagBits::eFragment, fragmentShaderString, fragmentShaderSPV )
-
 #ifndef NDEBUG
-  );
+   );
 #else
-  ;
+   ;
 #endif
-
    vk::ShaderModuleCreateInfo fragmentShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), fragmentShaderSPV);  
    vk::ShaderModule fragmentShaderModule = device.createShaderModule( fragmentShaderModuleCreateInfo );
-
+   glslang::FinalizeProcess();
+   //  Creation of Pipelline Shader Stages
+   array<vk::PipelineShaderStageCreateInfo, 2> pipelineShaderStageCreateInfos = {
+    vk::PipelineShaderStageCreateInfo( vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eVertex, vertexShaderModule, "main"),
+    vk::PipelineShaderStageCreateInfo( vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eFragment, fragmentShaderModule, "main")
+  };
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
@@ -321,7 +317,6 @@ int main(int argc, char** argv) try {
    }
 
    // cleanup 
-  glslang::FinalizeProcess();
   device.destroyShaderModule( fragmentShaderModule );
   device.destroyShaderModule( vertexShaderModule );
    for( auto & imageView : imageViews )
@@ -334,14 +329,11 @@ int main(int argc, char** argv) try {
 #endif
    instance.destroy();
    return EXIT_SUCCESS;
-
 } catch(SDL2pp::Exception& e) {
    cerr << "Error in: " << e.GetSDLFunction() << endl;
    cerr << "   Reason: " << e.GetSDLError() << endl;
    return EXIT_FAILURE;
-
 } catch(const exception& e) {
    cerr << e.what() << endl;
    return EXIT_FAILURE;
-
 } 
