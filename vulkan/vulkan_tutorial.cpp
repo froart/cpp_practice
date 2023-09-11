@@ -324,6 +324,35 @@ int main(int argc, char** argv) try {
      vertexInputBindingDescription,
      vertexInputAttributeDescriptions
    );
+   // specify what kind of geometry will be drawn from vertices
+   vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo( vk::PipelineInputAssemblyStateCreateFlags(), 
+          vk::PrimitiveTopology::eTriangleList );
+   // setup the viewport
+   vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.0f, 1.0f);
+   vk::Rect2D scissor({0, 0}, swapchainExtent);
+   vk::PipelineViewportStateCreateInfo pipelineViewportStateCreateInfo( vk::PipelineViewportStateCreateFlags(), 1, &viewport, 1, &scissor);
+   // setting up the rasterizer
+   vk::PipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo( vk::PipelineRasterizationStateCreateFlags(),
+         false, // depthClampEnable / requires GPU enabling
+         false, // rasterizerDiscardEnable / prevents vertices to get to the frame buffer 
+         vk::PolygonMode::eFill,
+                                                                                  vk::CullModeFlagBits::eBack,
+                                                                                  vk::FrontFace::eClockwise,
+                                                                                  false, // depthBiasEnable
+                                                                                  0.0f,  // depthBiasConstantFactor
+                                                                                  0.0f,  // depthBiasClamp
+                                                                                  0.0f,  // depthBiasSlopeFactor
+                                                                                  1.0f   // lineWidth
+                                                                                );
+   // multisampling setup (one of ways to preform anti-aliasing)
+   vk::PipelineMultisampleStateCreateInfo pipelineMultisaampleStateCreateInfo( vk::PipelineMultisampleStateCreateFlags(),
+                                                                                vk::SampleCountFlagBits::e1,
+                                                                                false, // sampleShadingEnable
+                                                                                1.0f, // minSampleShading
+                                                                                nullptr, // pSampleMask
+                                                                                false, // alphaToCoverageEnable
+                                                                                false // alphaToOneEnable
+     );
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
