@@ -346,13 +346,23 @@ int main(int argc, char** argv) try {
                                                                                 );
    // multisampling setup (one of ways to preform anti-aliasing)
    vk::PipelineMultisampleStateCreateInfo pipelineMultisaampleStateCreateInfo( vk::PipelineMultisampleStateCreateFlags(),
-                                                                                vk::SampleCountFlagBits::e1,
-                                                                                false, // sampleShadingEnable
-                                                                                1.0f, // minSampleShading
-                                                                                nullptr, // pSampleMask
-                                                                                false, // alphaToCoverageEnable
-                                                                                false // alphaToOneEnable
-     );
+                                                                               vk::SampleCountFlagBits::e1,
+                                                                               false, // sampleShadingEnable
+                                                                               1.0f, // minSampleShading
+                                                                               nullptr, // pSampleMask
+                                                                               false, // alphaToCoverageEnable
+                                                                               false // alphaToOneEnable
+    );
+   vk::StencilOpState stencilOpState( vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::CompareOp::eAlways); // the rest is optional
+   vk::PipelineDepthStencilStateCreateInfo pipelineDepthStencilStateCreateInfo( vk::PipelineDepthStencilStateCreateFlags(),
+                                                                               true, // depthTestEnable
+                                                                               true, // depthWriteEnable
+                                                                               vk::CompareOp::eLessOrEqual, // depthCompareOp
+                                                                               false, // depthBoundTestEnable
+                                                                               false, // stencilTestEnable
+                                                                               stencilOpState, // front
+                                                                               stencilOpState // back
+                                                                              );
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
