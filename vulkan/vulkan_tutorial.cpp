@@ -379,6 +379,51 @@ int main(int argc, char** argv) try {
                                                                             pipelineColorBlendAttachmentState, // attachments
                                                                             { {1.0f, 1.0f, 1.0f, 1.0f } } // blendContrasts
                                                                            );
+
+   // Setting up the pipeline layout 
+   // used to specify global variables which will be used by the pipeline, e.g. transformation matrices
+   vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo( 
+       vk::PipelineLayoutCreateFlags(), 
+       0, // setLayoutCount
+       nullptr,  // pSetLayouts
+       0, // pushConstantRangeCount 
+       nullptr ); // pPushConstantRanges
+   vk::PipelineLayout pipelineLayout = device.createPipelineLayout( vk::PipelineLayoutCreateInfo( pipelineLayoutCreateInfo ) );
+
+   // Render Pass 
+   // "...We need to specify how many color and depth buffers there will be, 
+   // how many samples to use for each of them and how their contents should be handled throughout the rendering operations. 
+   // All of this information is wrapped in a render pass object..."
+   vector<vk::AttachmentDescription> attachmentDescriptions;
+   attachmentDescriptions.emplace_back( 
+      vk::AttachmentDescriptionFlags(), 
+      format, // we take from a swapchain color format
+      vk::SampleCountFlagBits::e1,
+      vk::AttachmentLoadOp::eClear,
+      vk::AttachmentStoreOp::eStore,
+      vk::AttachmentLoadOp::eDontCare, // stencil loagOp
+      vk::AttachmentStoreOp::eDontCare, // stencil storeOp
+      vk::ImageLayout::eUndefined,
+      vk::ImageLayout::ePresentSrcKHR
+   );
+   vk::AttachmentReference colorAttachment( 0, vk::ImageLayout::eColorAttachmentOptimal );
+   // vk::AttachmentReference depthAttachment( 1, vk::ImageLayout::eDepthStencilAttachmentOptimal );
+   vk::SubpassDescription subpassDescription( vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, {}, colorAttachment, {}, nullptr);
+   vk::RenderPass renderPass = device.createRenderPass( vk::RenderPassCreateInfo( vk::RenderPassCreateFlags(), attachmentDescriptions, subpassDescription ) );
+   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo( vk::PipelineCreateFlags(),
+      pipelineShaderStageCreateInfos,
+      &pipelineVertexInputStateCreateInfo,
+      &pipelineInputAssemblyStateCreateInfo,
+      nullptr, // Tessalation Stage
+      &pipelineViewportStateCreateInfo,
+      &pipelineRasterizationStateCreateInfo,
+      &pipelineMultisaampleStateCreateInfo,
+      &pipelineDepthStencilStateCreateInfo,
+      &pipelineColorBlendStateCreateInfo,
+      &pipelineDynamicStateCreateInfo,
+      pipelineLayout,
+      renderPass
+   );
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
@@ -389,6 +434,8 @@ int main(int argc, char** argv) try {
    }
 
    // cleanup 
+  device.destroyRenderPass ( renderPass );
+  device.destroyPipelineLayout( pipelineLayout );
   device.destroyShaderModule( fragmentShaderModule );
   device.destroyShaderModule( vertexShaderModule );
    for( auto & imageView : imageViews )
