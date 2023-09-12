@@ -424,6 +424,17 @@ int main(int argc, char** argv) try {
       pipelineLayout,
       renderPass
    );
+   // Creating Frame buffers
+   vector<vk::Framebuffer> swapchainFramebuffers;
+   for(auto const & imageView : imageViews) {
+     vk::ImageView attachment = { imageView };
+     vk::FramebufferCreateInfo framebufferCreateInfo( vk::FramebufferCreateFlags(), renderPass, attachment, swapchainExtent.width, swapchainExtent.height, 1 );
+     swapchainFramebuffers.push_back( device.createFramebuffer( framebufferCreateInfo) );
+  }
+   // Creating graphics pipeline
+   auto [result, pipeline] = device.createGraphicsPipeline( nullptr, graphicsPipelineCreateInfo );
+   if(result != vk::Result::eSuccess)
+     throw runtime_error("Couldn't create graphics pipeline!");
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
@@ -434,6 +445,9 @@ int main(int argc, char** argv) try {
    }
 
    // cleanup 
+  for(auto const & swapchainFramebuffer : swapchainFramebuffers)
+    device.destroyFramebuffer( swapchainFramebuffer );
+  device.destroyPipeline( pipeline );
   device.destroyRenderPass ( renderPass );
   device.destroyPipelineLayout( pipelineLayout );
   device.destroyShaderModule( fragmentShaderModule );
