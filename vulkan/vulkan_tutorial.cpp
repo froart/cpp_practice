@@ -363,6 +363,22 @@ int main(int argc, char** argv) try {
                                                                                stencilOpState, // front
                                                                                stencilOpState // back
                                                                               );
+   vk::ColorComponentFlags colorComponentFlags( vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA );
+   vk::PipelineColorBlendAttachmentState pipelineColorBlendAttachmentState( false, // blendEnable
+                                                                            vk::BlendFactor::eZero, // srcColorBlendFactor
+                                                                            vk::BlendFactor::eZero, // sdtColorBlendFactro
+                                                                            vk::BlendOp::eAdd, // colorBlendOp
+                                                                            vk::BlendFactor::eZero, // srcAlphaBlendFactor
+                                                                            vk::BlendFactor::eZero, // dstAlphaBlendFactor
+                                                                            vk::BlendOp::eAdd, // AlphaBlendOp
+                                                                            colorComponentFlags
+                                                                          );
+    vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo( vk::PipelineColorBlendStateCreateFlags(),
+                                                                            false, // logicOpEnable
+                                                                            vk::LogicOp::eNoOp, // logicOp
+                                                                            pipelineColorBlendAttachmentState, // attachments
+                                                                            { {1.0f, 1.0f, 1.0f, 1.0f } } // blendContrasts
+                                                                           );
    // Main Rendering Loop
    bool quit = false;
    while(!quit) { 
