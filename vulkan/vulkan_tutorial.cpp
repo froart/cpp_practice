@@ -412,7 +412,8 @@ int main(int argc, char** argv) try {
    vk::AttachmentReference colorAttachment( 0, vk::ImageLayout::eColorAttachmentOptimal );
    // vk::AttachmentReference depthAttachment( 1, vk::ImageLayout::eDepthStencilAttachmentOptimal );
    vk::SubpassDescription subpassDescription( vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, {}, colorAttachment, {}, nullptr);
-   vk::RenderPass renderPass = device.createRenderPass( vk::RenderPassCreateInfo( vk::RenderPassCreateFlags(), attachmentDescriptions, subpassDescription ) );
+   vk::SubpassDependency dependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::AccessFlagBits::eColorAttachmentWrite );
+   vk::RenderPass renderPass = device.createRenderPass( vk::RenderPassCreateInfo( vk::RenderPassCreateFlags(), attachmentDescriptions, subpassDescription, dependency ) );
    vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo( vk::PipelineCreateFlags(),
       pipelineShaderStageCreateInfos,
       &pipelineVertexInputStateCreateInfo,
@@ -448,7 +449,7 @@ int main(int argc, char** argv) try {
    vk::Fence inFlightFence = device.createFence( vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled ) );
    const uint64_t timeout = numeric_limits<uint64_t>::max();
    array<vk::ClearValue, 2> clearValues; // defining clear value for vk::AttachmentLoadOp::eClear mentioned above
-   array<float, 4> clearColorValues = { 0.2f, 0.2f, 0.2f, 0.2f };
+   array<float, 4> clearColorValues = { 0.0f, 0.0f, 0.0f, 0.0f };
    // clearValues[0].color = vk::ClearColorValue( 0.2f, 0.2f, 0.2f, 0.2f );
    clearValues[0].color = vk::ClearColorValue( clearColorValues );
    clearValues[1].depthStencil = vk::ClearDepthStencilValue( 1.0f, 0 );
@@ -488,6 +489,7 @@ int main(int argc, char** argv) try {
       vk::PipelineStageFlags waitDestinationStageMask( vk::PipelineStageFlagBits::eColorAttachmentOutput );
       vk::SubmitInfo submitInfo( imageAvailableSemaphore, waitDestinationStageMask, commandBuffer, renderFinishedSemaphore );
       graphicsQueue.submit( submitInfo, inFlightFence );
+      presentQueue.presentKHR( vk::PresentInfoKHR( {}, swapchain, currentBuffer.value ) );
    }
 
    // cleanup 
