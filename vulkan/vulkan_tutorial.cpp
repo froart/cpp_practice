@@ -440,7 +440,7 @@ int main(int argc, char** argv) try {
      swapchainFramebuffers.push_back( device.createFramebuffer( framebufferCreateInfo) );
    }
    // Creating Command Pool
-   vk::CommandPool commandPool = device.createCommandPool( vk::CommandPoolCreateInfo( vk::CommandPoolCreateFlags(), graphicsQueueFamilyIndex ) );
+   vk::CommandPool commandPool = device.createCommandPool( vk::CommandPoolCreateInfo( vk::CommandPoolCreateFlags( vk::CommandPoolCreateFlagBits::eResetCommandBuffer ), graphicsQueueFamilyIndex ) );
    vk::CommandBuffer commandBuffer = device.allocateCommandBuffers( vk::CommandBufferAllocateInfo( commandPool, vk::CommandBufferLevel::ePrimary, 1 ) ).front();
 
    // Begin RenderPass
@@ -490,7 +490,10 @@ int main(int argc, char** argv) try {
       vk::SubmitInfo submitInfo( imageAvailableSemaphore, waitDestinationStageMask, commandBuffer, renderFinishedSemaphore );
       graphicsQueue.submit( submitInfo, inFlightFence );
       presentQueue.presentKHR( vk::PresentInfoKHR( {}, swapchain, currentBuffer.value ) );
+      quit = true;
    }
+   // when exiting main loop drawing and presentation operation may still be going and destroying its resources is a bad idea. Solution:
+   device.waitIdle();
 
    // cleanup 
   device.destroyFence( inFlightFence );
