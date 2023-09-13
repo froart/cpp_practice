@@ -438,9 +438,12 @@ int main(int argc, char** argv) try {
    // Creating Command Pool
    vk::CommandPool commandPool = device.createCommandPool( vk::CommandPoolCreateInfo( vk::CommandPoolCreateFlags(), graphicsQueueFamilyIndex ) );
    vk::CommandBuffer commandBuffer = device.allocateCommandBuffers( vk::CommandBufferAllocateInfo( commandPool, vk::CommandBufferLevel::ePrimary, 1 ) ).front();
+
    // Begin RenderPass
-   vk::Semaphore imageAcquiredSemaphore = device.createSemaphore( vk::SemaphoreCreateInfo() );
-   vk::ResultValue<uint32_t> currentBuffer = device.acquireNextImageKHR(swapchain, static_cast<uint64_t>(100000000), imageAcquiredSemaphore, nullptr );
+   vk::Semaphore imageAvailableSemaphore = device.createSemaphore( vk::SemaphoreCreateInfo() );
+   vk::Semaphore renderFinishedSemaphore = device.createSemaphore( vk::SemaphoreCreateInfo() );
+   vk::Fence inFlightFence = device.createFence( vk::FenceCreateInfo() );
+   vk::ResultValue<uint32_t> currentBuffer = device.acquireNextImageKHR(swapchain, static_cast<uint64_t>(100000000), imageAvailableSemaphore, nullptr );
 #ifndef NDEBUG
    assert( currentBuffer.result == vk::Result::eSuccess );
 #endif
@@ -455,6 +458,7 @@ int main(int argc, char** argv) try {
    commandBuffer.beginRenderPass( renderPassBeginInfo, vk::SubpassContents::eInline ); // all commands submit to primary command buffer
    // Main Rendering Loop
    commandBuffer.bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline ); // first parameter specifies whether the pipeline is graphical or computational
+   // commandBuffer.bindVertexBuffers(0 )
    // since we stated that viewport and scissor to be dynamic, we have to their values
    commandBuffer.setViewport( 0, vk::Viewport( 0.0f, 0.0f, static_cast<float>( swapchainExtent.width ), static_cast<float>( swapchainExtent.height ), 0.0f, 1.0f ) );
    commandBuffer.setScissor( 0, vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ) );
@@ -476,7 +480,9 @@ int main(int argc, char** argv) try {
    }
 
    // cleanup 
-  device.destroySemaphore( imageAcquiredSemaphore );
+  device.destroyFence( inFlightFence );
+  device.destroySemaphore( imageAvailableSemaphore );
+  device.destroySemaphore( renderFinishedSemaphore );
   device.freeCommandBuffers( commandPool, commandBuffer );
   device.destroyCommandPool( commandPool );
   for(auto const & swapchainFramebuffer : swapchainFramebuffers)
