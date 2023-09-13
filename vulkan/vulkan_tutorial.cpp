@@ -15,6 +15,7 @@
 #include <glslang/Public/ShaderLang.h>
 #include <fstream>
 #include "default_resources.hpp"
+#include  <limits>
 
 using namespace std;
 
@@ -205,6 +206,8 @@ int main(int argc, char** argv) try {
 
    vk::DeviceCreateInfo deviceCreateInfo(vk::DeviceCreateFlags(), deviceQueueCreateInfo, {}, deviceExtensions);
    vk::Device device = physicalDevice.createDevice( deviceCreateInfo );
+   vk::Queue graphicsQueue = device.getQueue( graphicsQueueFamilyIndex, 0 );
+   vk::Queue presentQueue = device.getQueue( presentQueueFamilyIndex, 0 );
    
    // Get supported formats
    vector<vk::SurfaceFormatKHR> formats = physicalDevice.getSurfaceFormatsKHR( surface );
@@ -442,41 +445,49 @@ int main(int argc, char** argv) try {
    // Begin RenderPass
    vk::Semaphore imageAvailableSemaphore = device.createSemaphore( vk::SemaphoreCreateInfo() );
    vk::Semaphore renderFinishedSemaphore = device.createSemaphore( vk::SemaphoreCreateInfo() );
-   vk::Fence inFlightFence = device.createFence( vk::FenceCreateInfo() );
-   vk::ResultValue<uint32_t> currentBuffer = device.acquireNextImageKHR(swapchain, static_cast<uint64_t>(100000000), imageAvailableSemaphore, nullptr );
-#ifndef NDEBUG
-   assert( currentBuffer.result == vk::Result::eSuccess );
-#endif
-   // start loading commands to the command buffer
-   commandBuffer.begin( vk::CommandBufferBeginInfo( vk::CommandBufferUsageFlags() ) ); // start a buffers
+   vk::Fence inFlightFence = device.createFence( vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled ) );
+   const uint64_t timeout = numeric_limits<uint64_t>::max();
    array<vk::ClearValue, 2> clearValues; // defining clear value for vk::AttachmentLoadOp::eClear mentioned above
    array<float, 4> clearColorValues = { 0.2f, 0.2f, 0.2f, 0.2f };
    // clearValues[0].color = vk::ClearColorValue( 0.2f, 0.2f, 0.2f, 0.2f );
    clearValues[0].color = vk::ClearColorValue( clearColorValues );
    clearValues[1].depthStencil = vk::ClearDepthStencilValue( 1.0f, 0 );
-   vk::RenderPassBeginInfo renderPassBeginInfo( renderPass, swapchainFramebuffers[currentBuffer.value], vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ), clearValues );
-   commandBuffer.beginRenderPass( renderPassBeginInfo, vk::SubpassContents::eInline ); // all commands submit to primary command buffer
-   // Main Rendering Loop
-   commandBuffer.bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline ); // first parameter specifies whether the pipeline is graphical or computational
-   // commandBuffer.bindVertexBuffers(0 )
-   // since we stated that viewport and scissor to be dynamic, we have to their values
-   commandBuffer.setViewport( 0, vk::Viewport( 0.0f, 0.0f, static_cast<float>( swapchainExtent.width ), static_cast<float>( swapchainExtent.height ), 0.0f, 1.0f ) );
-   commandBuffer.setScissor( 0, vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ) );
-   // finally drawing
-   commandBuffer.draw( 3, // number of vertices
-                       1, // used for instanced drawing
-                       0, // firstVertex offset
-                       0 // firstInstance offset
-                      );
-   // after drawing we can now end renderPass and commandBuffer
-   commandBuffer.endRenderPass();
-   commandBuffer.end();
    bool quit = false;
    while(!quit) { 
       SDL_Event event;
       SDL_PollEvent(&event);
       if(event.type == SDL_QUIT || event.key.keysym.sym == SDLK_ESCAPE)          // if ESC is hit
          quit = true;
+      // drawing
+      device.waitForFences( inFlightFence, VK_TRUE, timeout ); // 2: wait for all fences (if one fence -- douesn't matter), 3: fenceTimeout
+      device.resetFences( inFlightFence );
+      vk::ResultValue<uint32_t> currentBuffer = device.acquireNextImageKHR(swapchain, timeout, imageAvailableSemaphore, nullptr );
+#ifndef NDEBUG
+      assert( currentBuffer.result == vk::Result::eSuccess );
+#endif
+      commandBuffer.reset(); // make sure buffer is available
+      // start loading commands to the command buffer
+      commandBuffer.begin( vk::CommandBufferBeginInfo( vk::CommandBufferUsageFlags() ) ); // start a buffers
+      vk::RenderPassBeginInfo renderPassBeginInfo( renderPass, swapchainFramebuffers[currentBuffer.value], vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ), clearValues );
+      commandBuffer.beginRenderPass( renderPassBeginInfo, vk::SubpassContents::eInline ); // all commands submit to primary command buffer
+      // Main Rendering Loop
+      commandBuffer.bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline ); // first parameter specifies whether the pipeline is graphical or computational
+      // commandBuffer.bindVertexBuffers(0 )
+      // since we stated that viewport and scissor to be dynamic, we have to their values
+      commandBuffer.setViewport( 0, vk::Viewport( 0.0f, 0.0f, static_cast<float>( swapchainExtent.width ), static_cast<float>( swapchainExtent.height ), 0.0f, 1.0f ) );
+      commandBuffer.setScissor( 0, vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ) );
+      // loading command to commandBuffer for execution
+      commandBuffer.draw( 3, // number of vertices
+                          1, // used for instanced drawing
+                          0, // firstVertex offset
+                          0 // firstInstance offset
+                        );
+      // after drawing we can now end renderPass and commandBuffer
+      commandBuffer.endRenderPass();
+      commandBuffer.end();
+      vk::PipelineStageFlags waitDestinationStageMask( vk::PipelineStageFlagBits::eColorAttachmentOutput );
+      vk::SubmitInfo submitInfo( imageAvailableSemaphore, waitDestinationStageMask, commandBuffer, renderFinishedSemaphore );
+      graphicsQueue.submit( submitInfo, inFlightFence );
    }
 
    // cleanup 
