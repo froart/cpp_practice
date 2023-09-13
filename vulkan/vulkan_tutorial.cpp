@@ -458,7 +458,15 @@ int main(int argc, char** argv) try {
    // since we stated that viewport and scissor to be dynamic, we have to their values
    commandBuffer.setViewport( 0, vk::Viewport( 0.0f, 0.0f, static_cast<float>( swapchainExtent.width ), static_cast<float>( swapchainExtent.height ), 0.0f, 1.0f ) );
    commandBuffer.setScissor( 0, vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ) );
-
+   // finally drawing
+   commandBuffer.draw( 3, // number of vertices
+                       1, // used for instanced drawing
+                       0, // firstVertex offset
+                       0 // firstInstance offset
+                      );
+   // after drawing we can now end renderPass and commandBuffer
+   commandBuffer.endRenderPass();
+   commandBuffer.end();
    bool quit = false;
    while(!quit) { 
       SDL_Event event;
