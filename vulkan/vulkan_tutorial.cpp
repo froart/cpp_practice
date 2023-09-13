@@ -437,8 +437,28 @@ int main(int argc, char** argv) try {
    }
    // Creating Command Pool
    vk::CommandPool commandPool = device.createCommandPool( vk::CommandPoolCreateInfo( vk::CommandPoolCreateFlags(), graphicsQueueFamilyIndex ) );
-   vk::CommandBuffer commandBuffer = device.allocateCommandBuffer( vk::CommandBufferAllocateInfo( commandPool, vk::CommandBufferLevel::ePrimary, 1 ) ).front();
+   vk::CommandBuffer commandBuffer = device.allocateCommandBuffers( vk::CommandBufferAllocateInfo( commandPool, vk::CommandBufferLevel::ePrimary, 1 ) ).front();
+   // Begin RenderPass
+   vk::Semaphore imageAcquiredSemaphore = device.createSemaphore( vk::SemaphoreCreateInfo() );
+   vk::ResultValue<uint32_t> currentBuffer = device.acquireNextImageKHR(swapchain, static_cast<uint64_t>(100000000), imageAcquiredSemaphore, nullptr );
+#ifndef NDEBUG
+   assert( currentBuffer.result == vk::Result::eSuccess );
+#endif
+   // start loading commands to the command buffer
+   commandBuffer.begin( vk::CommandBufferBeginInfo( vk::CommandBufferUsageFlags() ) ); // start a buffers
+   array<vk::ClearValue, 2> clearValues; // defining clear value for vk::AttachmentLoadOp::eClear mentioned above
+   array<float, 4> clearColorValues = { 0.2f, 0.2f, 0.2f, 0.2f };
+   // clearValues[0].color = vk::ClearColorValue( 0.2f, 0.2f, 0.2f, 0.2f );
+   clearValues[0].color = vk::ClearColorValue( clearColorValues );
+   clearValues[1].depthStencil = vk::ClearDepthStencilValue( 1.0f, 0 );
+   vk::RenderPassBeginInfo renderPassBeginInfo( renderPass, swapchainFramebuffers[currentBuffer.value], vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ), clearValues );
+   commandBuffer.beginRenderPass( renderPassBeginInfo, vk::SubpassContents::eInline ); // all commands submit to primary command buffer
    // Main Rendering Loop
+   commandBuffer.bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline ); // first parameter specifies whether the pipeline is graphical or computational
+   // since we stated that viewport and scissor to be dynamic, we have to their values
+   commandBuffer.setViewport( 0, vk::Viewport( 0.0f, 0.0f, static_cast<float>( swapchainExtent.width ), static_cast<float>( swapchainExtent.height ), 0.0f, 1.0f ) );
+   commandBuffer.setScissor( 0, vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ) );
+
    bool quit = false;
    while(!quit) { 
       SDL_Event event;
@@ -448,6 +468,7 @@ int main(int argc, char** argv) try {
    }
 
    // cleanup 
+  device.destroySemaphore( imageAcquiredSemaphore );
   device.freeCommandBuffers( commandPool, commandBuffer );
   device.destroyCommandPool( commandPool );
   for(auto const & swapchainFramebuffer : swapchainFramebuffers)
