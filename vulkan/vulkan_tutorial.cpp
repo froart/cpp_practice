@@ -475,6 +475,7 @@ int main(int argc, char** argv) try {
       commandBuffer.bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline ); // first parameter specifies whether the pipeline is graphical or computational
       // commandBuffer.bindVertexBuffers(0 )
       // since we stated that viewport and scissor to be dynamic, we have to their values
+      commandBuffer.bindVertexBuffers( 0, vk::Buffer{}, { 0 } );
       commandBuffer.setViewport( 0, vk::Viewport( 0.0f, 0.0f, static_cast<float>( swapchainExtent.width ), static_cast<float>( swapchainExtent.height ), 0.0f, 1.0f ) );
       commandBuffer.setScissor( 0, vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ) );
       // loading command to commandBuffer for execution
