@@ -19,12 +19,14 @@
 
 using namespace std;
 
-const int width = 800;
+const int width  = 800;
 const int height = 600;
+const char* appName = "Vulkan Tutorial";
+// TODO: DebugUtilsMessenger
 
 // Enabling extensions
 vector<const char*> instanceExtensions = { VK_KHR_SURFACE_EXTENSION_NAME };
-vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+vector<const char*> deviceExtensions   = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 // Enabling validation layers
 #ifndef NDEBUG
@@ -35,48 +37,48 @@ const bool enableValidationLayers = false;
 #endif
 
 #ifndef NDEBUG
-//PFN_vkCreateDebugUtilsMessengerEXT  pfnVkCreateDebugUtilsMessengerEXT;
-//VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugUtilsMessengerEXT( VkInstance                                 instance,
-//                                                             const VkDebugUtilsMessengerCreateInfoEXT * pCreateInfo,
-//                                                             const VkAllocationCallbacks *              pAllocator,
-//                                                             VkDebugUtilsMessengerEXT *                 pMessenger ) {
-// return pfnVkCreateDebugUtilsMessengerEXT( instance, pCreateInfo, pAllocator, pMessenger );
-//}
-//VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-//                                              VkDebugUtilsMessageTypeFlagsEXT messageType,
-//                                              VkDebugUtilsMessengerCallbackDataEXT const * pCallbackData,
-//                                              void* pUserData) {
-//      cerr << "Validation layer: " << pCallbackData->pMessage << endl;
-//      return VK_FALSE;
-//}
-bool checkValidationLayerSupport() {
+// Check if specifies validationLayers are actually supported by the system
+bool checkValidationLayerSupport() 
+{
    unsigned int layerCount;
-   vk::enumerateInstanceLayerProperties(&layerCount, nullptr);
-   vector<vk::LayerProperties> availableLayers(layerCount);
-   vk::enumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-   for(const char* layerName : validationLayers) {
+   vk::enumerateInstanceLayerProperties( &layerCount, nullptr );
+   vector<vk::LayerProperties> availableLayers( layerCount );
+   vk::enumerateInstanceLayerProperties( &layerCount, availableLayers.data() );
+   for( const char* layerName : validationLayers ) 
+   {
       bool layerFound = false;
-      for(const auto& layerProperties : availableLayers) {
-         if(strcmp(layerName, layerProperties.layerName) == 0) {
+      for( const auto& layerProperties : availableLayers )
+      {
+         if( strcmp( layerName, layerProperties.layerName ) == 0)
+         {
             layerFound = true;
             break;
          }
       }
-      if(!layerFound) return false;
+      if( !layerFound ) return false;
    }
    return true;
 }
 #endif
 
-EShLanguage translateShaderStage(const vk::ShaderStageFlagBits shaderType) {
-   switch( shaderType ) {
-      case vk::ShaderStageFlagBits::eVertex: return EShLangVertex;
+EShLanguage translateShaderStage( const vk::ShaderStageFlagBits shaderType )
+{
+   switch( shaderType ) 
+   {
+      case vk::ShaderStageFlagBits::eVertex:   return EShLangVertex;
       case vk::ShaderStageFlagBits::eFragment: return EShLangFragment;
       default: cout << "Unknown stage shader"; return EShLangVertex;
    }
 }
 
-bool GLSLtoSPV( const vk::ShaderStageFlagBits shaderType, string const & glslShader, vector<unsigned int> & spvShader ) {
+string fileToString( string const & filename )
+{
+  ifstream file(filename, ios::in);
+  return string((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+}
+
+bool GLSLtoSPV( const vk::ShaderStageFlagBits shaderType, string const & glslShader, vector<unsigned int> & spvShader )
+{
    
    EShLanguage stage = translateShaderStage( shaderType );
 
@@ -88,7 +90,7 @@ bool GLSLtoSPV( const vk::ShaderStageFlagBits shaderType, string const & glslSha
 
    TBuiltInResource Resources = InitResources();      
 
-   EShMessages messages = (EShMessages) ( EShMsgSpvRules | EShMsgVulkanRules );
+   EShMessages messages = ( EShMessages ) ( EShMsgSpvRules | EShMsgVulkanRules );
 
    if( !shader.parse( &Resources, 100, false, messages ) ) {
       cerr << shader.getInfoLog() << endl << shader.getInfoDebugLog() << endl;
@@ -108,393 +110,372 @@ bool GLSLtoSPV( const vk::ShaderStageFlagBits shaderType, string const & glslSha
    return true; 
 }
 
-int main(int argc, char** argv) try {
+int main( int /*argc*/, char** /*argv*/ ) try 
+{
 
-   // Creating SDL window
-   SDL2pp::SDL sdl(SDL_INIT_VIDEO);
-   SDL2pp::Window window("My vulkan tutorial",
+  // Creating SDL window
+  SDL2pp::SDL sdl( SDL_INIT_VIDEO );
+  SDL2pp::Window window( appName,
                          SDL_WINDOWPOS_UNDEFINED, 
                          SDL_WINDOWPOS_UNDEFINED,
                          width, height,
-                         SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN); // Vulkan flag must be added in order to use SDL_Vulkan_CreateSurface()
+                         SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN ); // Vulkan flag must be added in order to use SDL_Vulkan_CreateSurface()
 
 #ifndef NDEBUG
-   if(enableValidationLayers && !checkValidationLayerSupport()) // check if requested validation layers exist on the system
-      throw runtime_error("Validation layers requested but not available");
+  if( enableValidationLayers && !checkValidationLayerSupport() ) // check if requested validation layers exist on the system
+    throw runtime_error( "Validation layers requested, but not available!" );
 #endif
 
-   unsigned int count = 0;
+  unsigned int count = 0;
 
 #ifndef NDEBUG // retrieve the number of extensions required to ntegrate SDL with Vulkan
-   assert(SDL_Vulkan_GetInstanceExtensions(window.Get(), &count, nullptr));
+  assert( SDL_Vulkan_GetInstanceExtensions( window.Get(), &count, nullptr) );
 #else
-   SDL_Vulkan_GetInstanceExtensions(window.Get(), &count, nullptr);
+  SDL_Vulkan_GetInstanceExtensions( window.Get(), &count, nullptr );
 #endif
 
-   vector<const char*> SDL_extensions_required(count);
+  vector<const char*> SDL_extensions_required( count );
 
 #ifndef NDEBUG // retrieve the extensions required to integrate SDL with Vulkan
-   assert(SDL_Vulkan_GetInstanceExtensions(window.Get(), &count, SDL_extensions_required.data()));
+  assert( SDL_Vulkan_GetInstanceExtensions( window.Get(), &count, SDL_extensions_required.data() ) );
 #else
-   SDL_Vulkan_GetInstanceExtensions(window.Get(), &count, SDL_extensions_required.data());
+  SDL_Vulkan_GetInstanceExtensions( window.Get(), &count, SDL_extensions_required.data() );
 #endif
-   for(int i = 0; i < count; ++i) // fill the Vulkan extension list with the required SDL extensions
-      instanceExtensions.push_back(SDL_extensions_required[i]);
 
-   // Creating Vulkan instance
-   vk::ApplicationInfo appInfo ( "Hello triangle", VK_MAKE_VERSION(1,0,0), "No Engine", 1, VK_MAKE_VERSION(1,0,0) );
+  for( int i = 0; i < count; ++i ) // fill the Vulkan extension list with the required SDL extensions
+    instanceExtensions.push_back( SDL_extensions_required[i] );
+
+  vk::ApplicationInfo appInfo ( appName, VK_MAKE_VERSION(1,0,0), "No Engine", 1, VK_MAKE_VERSION(1,0,0) ); // Creating Vulkan instance
+
 #ifndef NDEBUG
-   vk::InstanceCreateInfo instanceCreateInfo ( {}, &appInfo, validationLayers, instanceExtensions );
+  vk::InstanceCreateInfo instanceCreateInfo ( {}, &appInfo, validationLayers, instanceExtensions );
 #else
-   vk::InstanceCreateInfo instanceCreateInfo ( {}, &appInfo, {}, instanceExtensions );
+  vk::InstanceCreateInfo instanceCreateInfo ( {}, &appInfo, {},               instanceExtensions );
 #endif
-   vk::Instance instance = vk::createInstance ( instanceCreateInfo ); ;
 
-   // Binding SDL and Vulkan via Surface
-   vk::SurfaceKHR surface;
-   {
-      VkSurfaceKHR _surface;
-      assert(SDL_Vulkan_CreateSurface( window.Get(), static_cast<VkInstance>(instance), &_surface )); // bind Vulkan Surface to SDL Window
-      surface = vk::SurfaceKHR( _surface ); // move assignment
-   }
+  vk::Instance instance = vk::createInstance ( instanceCreateInfo ); ;
+
+  vk::SurfaceKHR surface; // Binding SDL and Vulkan via Surface
+  {
+    VkSurfaceKHR _surface;
+    assert( SDL_Vulkan_CreateSurface( window.Get(), static_cast<VkInstance>( instance ), &_surface ) ); // bind Vulkan Surface to SDL Window
+    surface = vk::SurfaceKHR( _surface ); // move assignment
+  }
+
+  vk::PhysicalDevice physicalDevice = instance.enumeratePhysicalDevices().front(); // Choose the first found physical device
+
+  vk::PhysicalDeviceProperties physicalDeviceProperties = physicalDevice.getProperties();
+  cout << "Chosen Physical Device Information:" << endl; // print chosen physical device's properties
+  cout << "Device Name: " << physicalDeviceProperties.deviceName << endl;
+  cout << "API Version: " << VK_VERSION_MAJOR( physicalDeviceProperties.apiVersion ) << "."
+                          << VK_VERSION_MINOR( physicalDeviceProperties.apiVersion ) << "."
+                          << VK_VERSION_PATCH( physicalDeviceProperties.apiVersion ) << endl;
+
+  if( physicalDeviceProperties.deviceType != vk::PhysicalDeviceType::eDiscreteGpu ) // Warn if a chosen device is not a GPU
+    cerr << "Chosen physical device is not a descrete GPU!" << endl;
+
+  vk::PhysicalDeviceFeatures physicalDeviceFeatures = physicalDevice.getFeatures(); // Retrieve physical device Features
+  if( !physicalDeviceFeatures.geometryShader )
+    throw runtime_error("Chosen physical device doesn't have a geometry shader!"); // Geometry Shader is a required feature
+
+  vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+  auto graphicsQFPIt = find_if( queueFamilyProperties.begin(), queueFamilyProperties.end(),
+                                []( vk::QueueFamilyProperties const & qfp ) 
+                                { return qfp.queueFlags & vk::QueueFlagBits::eGraphics; } // find eGraphics queue family
+                              );
+
+  size_t graphicsQueueFamilyIndex = distance( queueFamilyProperties.begin(), graphicsQFPIt );
+  size_t presentQueueFamilyIndex  = physicalDevice.getSurfaceSupportKHR( static_cast<uint32_t>( graphicsQueueFamilyIndex ), surface ) 
+                                    ? graphicsQueueFamilyIndex : queueFamilyProperties.size(); // check if the index has a surface support
 
 #ifndef NDEBUG
-   // Create a customized DebugMessenger
-/* FIXME the function vkCreateDebugUtilsMessengerEXT throws a segfault
-   vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                                                        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                                                        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
-   vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags( vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                                                       vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                                                       vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
-   vk::DebugUtilsMessengerEXT debugUtilsMessenger = instance.createDebugUtilsMessengerEXT (vk::DebugUtilsMessengerCreateInfoEXT ( {}, severityFlags, messageTypeFlags, &debugCallback) ); 
-*/
+  assert( presentQueueFamilyIndex == graphicsQueueFamilyIndex );
 #endif
 
-   // Retrieve physical devices
-   vk::PhysicalDevice physicalDevice = instance.enumeratePhysicalDevices().front(); // Choose the first found physical device
+  float queuePriority = 0.0f;
+  vk::DeviceQueueCreateInfo deviceQueueCreateInfo( vk::DeviceQueueCreateFlags(), static_cast<uint32_t>( graphicsQueueFamilyIndex ), 1, &queuePriority );
 
-   // Query the physical device properties
-   vk::PhysicalDeviceProperties physicalDeviceProperties = physicalDevice.getProperties(); // and retrieve its properties
-   cout << "Chosen Physical Device Information:" << endl; // print chosen physical device's properties
-   cout << "Device Name: " << physicalDeviceProperties.deviceName << endl;
-   cout << "API Version: " << VK_VERSION_MAJOR(physicalDeviceProperties.apiVersion) << "."
-                           << VK_VERSION_MINOR(physicalDeviceProperties.apiVersion) << "."
-                           << VK_VERSION_PATCH(physicalDeviceProperties.apiVersion) << endl;
-   if(physicalDeviceProperties.deviceType != vk::PhysicalDeviceType::eDiscreteGpu) // Warn if a chosen device is not a GPU
-      cerr << "Chosen physical device is not a descrete GPU!" << endl;
+  vk::DeviceCreateInfo deviceCreateInfo( vk::DeviceCreateFlags(), deviceQueueCreateInfo, {}, deviceExtensions );
+  vk::Device device             = physicalDevice.createDevice( deviceCreateInfo );
+  vk::CommandPool commandPool   = device.createCommandPool( vk::CommandPoolCreateInfo( vk::CommandPoolCreateFlags( vk::CommandPoolCreateFlagBits::eResetCommandBuffer ), graphicsQueueFamilyIndex ) );
 
-   // Query the physical device features
-   vk::PhysicalDeviceFeatures physicalDeviceFeatures = physicalDevice.getFeatures(); // Retrieve physical device Features
-   if(!physicalDeviceFeatures.geometryShader) // Geometry Shader is a required feature
-      throw runtime_error("Chosen physical device doesn't have a geometry shader!");
-
-   // Query the physical device queue families
-   vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
-   auto propertyIt = find_if(queueFamilyProperties.begin(), queueFamilyProperties.end(), // find eGraphics queue family
-                             [](vk::QueueFamilyProperties const & qfp) { return qfp.queueFlags & vk::QueueFlagBits::eGraphics; } );
-   size_t graphicsQueueFamilyIndex = distance(queueFamilyProperties.begin(), propertyIt);
-   size_t presentQueueFamilyIndex = physicalDevice.getSurfaceSupportKHR( static_cast<uint32_t>( graphicsQueueFamilyIndex ), surface ) // check if the index has a surface support
-                                    ? graphicsQueueFamilyIndex : queueFamilyProperties.size();
+  /* Actual objects used during rendering loop */
+  vk::Queue         graphicsQueue = device.getQueue( graphicsQueueFamilyIndex, 0 );
+  vk::Queue         presentQueue  = device.getQueue( presentQueueFamilyIndex, 0 );
+  vk::CommandBuffer commandBuffer = device.allocateCommandBuffers( vk::CommandBufferAllocateInfo( commandPool, vk::CommandBufferLevel::ePrimary, 1 ) ).front();
+  
+  vector<vk::SurfaceFormatKHR> formats = physicalDevice.getSurfaceFormatsKHR( surface ); // Retrieve supported formats
 #ifndef NDEBUG
-   assert( presentQueueFamilyIndex == graphicsQueueFamilyIndex );
+  assert( !formats.empty() );
 #endif
 
-   // Create a logical device
-   float queuePriority = 0.0f;
-   vk::DeviceQueueCreateInfo deviceQueueCreateInfo( vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(graphicsQueueFamilyIndex), 1, &queuePriority );
-
-   vk::DeviceCreateInfo deviceCreateInfo(vk::DeviceCreateFlags(), deviceQueueCreateInfo, {}, deviceExtensions);
-   vk::Device device = physicalDevice.createDevice( deviceCreateInfo );
-   vk::Queue graphicsQueue = device.getQueue( graphicsQueueFamilyIndex, 0 );
-   vk::Queue presentQueue = device.getQueue( presentQueueFamilyIndex, 0 );
-   
-   // Get supported formats
-   vector<vk::SurfaceFormatKHR> formats = physicalDevice.getSurfaceFormatsKHR( surface );
-#ifndef NDEBUG
-   assert( !formats.empty() );
-#endif
-
-   vk::Format format = ( formats[0] == vk::Format::eUndefined ) ? vk::Format::eB8G8R8A8Unorm : formats[0].format;
-   vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR( surface );
-   vk::Extent2D swapchainExtent;
-   if( surfaceCapabilities.currentExtent.width == numeric_limits<uint32_t>::max() ) { // if the furface resolution is underfined
-      //... set it to the sizes of the image
-      swapchainExtent.width = clamp( static_cast<uint32_t>(width), surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width );
-      swapchainExtent.height = clamp( static_cast<uint32_t>(height), surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height );
-   } else {
-      // if defined, the swapchain resolution must match it
-      swapchainExtent = surfaceCapabilities.currentExtent;
-   }
+  vk::Format format = ( formats[0] == vk::Format::eUndefined ) ? vk::Format::eB8G8R8A8Unorm : formats[0].format;
+  vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR( surface );
+  vk::Extent2D swapchainExtent;
+  if( surfaceCapabilities.currentExtent.width == numeric_limits<uint32_t>::max() ) // if the furface resolution is underfined
+  { //... set it to the sizes of the image
+    swapchainExtent.width  = clamp( static_cast<uint32_t>( width ),  surfaceCapabilities.minImageExtent.width,  surfaceCapabilities.maxImageExtent.width );
+    swapchainExtent.height = clamp( static_cast<uint32_t>( height ), surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height );
+  } 
+  else 
+  { // if defined, the swapchain resolution must match it
+    swapchainExtent = surfaceCapabilities.currentExtent;
+  }
 
 #ifndef NDEBUG
-   cout << "Surface capabilities image count: min: " << surfaceCapabilities.minImageCount << ", max: " << surfaceCapabilities.maxImageCount << endl;
+  cout << "Surface capabilities image count: min: " 
+       << surfaceCapabilities.minImageCount 
+       << ", max: " 
+       << surfaceCapabilities.maxImageCount << endl; // FIXME maxImageCoutn is always equal to 0
 #endif
 
-   // set to not apply any tranformation upon image
-   vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
-   vk::SurfaceTransformFlagBitsKHR preTransform = ( surfaceCapabilities.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity )
-                                                  ? vk::SurfaceTransformFlagBitsKHR::eIdentity
+  vk::PresentModeKHR swapchainPresentMode      = vk::PresentModeKHR::eFifo;
+  vk::SurfaceTransformFlagBitsKHR preTransform = ( surfaceCapabilities.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity )                                                                 ? vk::SurfaceTransformFlagBitsKHR::eIdentity // set to not apply any tranformation upon image
                                                   : surfaceCapabilities.currentTransform;
    
-   // set to not blend with other windows
-   vk::CompositeAlphaFlagBitsKHR compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+  vk::CompositeAlphaFlagBitsKHR compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque; // set to not blend with other windows
    
-   // defining the swapchain create information 
-   vk::SwapchainCreateInfoKHR swapchainCreateInfo( vk::SwapchainCreateFlagsKHR(),
-                                                   surface,
-                                                   // define the number of image in the swapchain
-                                                   // FIXME for some reason surfaceCapabilities.maxImageCount == 0
-                                                   //clamp( static_cast<uint32_t>(3), surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount ),
-                                                   3u,
-                                                   format,
-                                                   vk::ColorSpaceKHR::eSrgbNonlinear,
-                                                   swapchainExtent,
-                                                   1,
-                                                   vk::ImageUsageFlagBits::eColorAttachment,
-                                                   vk::SharingMode::eExclusive,
-                                                   {},
-                                                   preTransform,
-                                                   compositeAlpha,
-                                                   swapchainPresentMode,
-                                                   true,
-                                                   nullptr );
+  vk::SwapchainCreateInfoKHR swapchainCreateInfo( vk::SwapchainCreateFlagsKHR(),
+                                                  surface,
+                                                  clamp( static_cast<uint32_t>(3), // define the number of image in the swapchain
+                                                         surfaceCapabilities.minImageCount, 
+                                                         static_cast<uint32_t>(3) /*surfaceCapabilities.maxImageCount*/ ), // FIXME 
+                                                  format,
+                                                  vk::ColorSpaceKHR::eSrgbNonlinear,
+                                                  swapchainExtent,
+                                                  1,
+                                                  vk::ImageUsageFlagBits::eColorAttachment,
+                                                  vk::SharingMode::eExclusive,
+                                                  {},
+                                                  preTransform,
+                                                  compositeAlpha,
+                                                  swapchainPresentMode,
+                                                  true,
+                                                  nullptr );
 
-   vk::SwapchainKHR swapchain = device.createSwapchainKHR ( swapchainCreateInfo );
+  vk::SwapchainKHR swapchain = device.createSwapchainKHR ( swapchainCreateInfo );
                                                   
-   vector<vk::Image> swapchainImages = device.getSwapchainImagesKHR( swapchain );
-   vector<vk::ImageView> imageViews;
-   imageViews.reserve( swapchainImages.size() );
-   vk::ImageViewCreateInfo imageViewCreateInfo( {}, {}, vk::ImageViewType::e2D, format, {}, { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } );
-   for ( auto image : swapchainImages ) {
-      imageViewCreateInfo.image = image;
-      imageViews.push_back( device.createImageView( imageViewCreateInfo ) );
-   }
+  vector<vk::Image> swapchainImages = device.getSwapchainImagesKHR( swapchain );
+  vector<vk::ImageView> imageViews;
+  imageViews.reserve( swapchainImages.size() );
+  vk::ImageViewCreateInfo imageViewCreateInfo( {}, {}, vk::ImageViewType::e2D, format, {}, { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } );
+  for ( auto image : swapchainImages ) {
+    imageViewCreateInfo.image = image;
+    imageViews.push_back( device.createImageView( imageViewCreateInfo ) );
+  }
 
-   // Compile the GLSL shaders
-   glslang::InitializeProcess();
-   // Creating vertex shader module
-   vector<unsigned int> vertexShaderSPV; // actual SPIR-V bytecode
-   // File to string
-   ifstream vertexShaderFile("../shader.vert", ios::in);
-   string vertexShaderString((istreambuf_iterator<char>(vertexShaderFile)), istreambuf_iterator<char>());
-#ifndef NDEBUG
-   assert(
-#endif
-   GLSLtoSPV(vk::ShaderStageFlagBits::eVertex, vertexShaderString, vertexShaderSPV )
-#ifndef NDEBUG
-   );
-#else
-   ;
-#endif
-   vk::ShaderModuleCreateInfo vertexShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), vertexShaderSPV);
-   vk::ShaderModule vertexShaderModule = device.createShaderModule( vertexShaderModuleCreateInfo );
+  glslang::InitializeProcess();
 
-   // Creating fragment shader module
-   vector<unsigned int> fragmentShaderSPV; // actual SPIR-V bytecode
-   ifstream fragmentShaderFile("../shader.frag", ios::in);
-   string fragmentShaderString((istreambuf_iterator<char>(fragmentShaderFile)), istreambuf_iterator<char>());
-#ifndef NDEBUG
-   assert(
-#endif
-   GLSLtoSPV( vk::ShaderStageFlagBits::eFragment, fragmentShaderString, fragmentShaderSPV )
-#ifndef NDEBUG
-   );
-#else
-   ;
-#endif
-   vk::ShaderModuleCreateInfo fragmentShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), fragmentShaderSPV);  
-   vk::ShaderModule fragmentShaderModule = device.createShaderModule( fragmentShaderModuleCreateInfo );
-   glslang::FinalizeProcess();
+  vector<unsigned int> vertexShaderSPV; // actual SPIR-V bytecode
+  string vertexShaderString = fileToString("../shader.vert");
+  assert ( GLSLtoSPV( vk::ShaderStageFlagBits::eVertex, vertexShaderString, vertexShaderSPV ) ); // Compiling GLSL vertex shader code to SPIR-V
+  vk::ShaderModuleCreateInfo vertexShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), vertexShaderSPV );
+  vk::ShaderModule vertexShaderModule = device.createShaderModule( vertexShaderModuleCreateInfo );
 
-   //  Creation of Pipelline Shader Stages
-   array<vk::PipelineShaderStageCreateInfo, 2> pipelineShaderStageCreateInfos = {
-    vk::PipelineShaderStageCreateInfo( vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eVertex, vertexShaderModule, "main"),
-    vk::PipelineShaderStageCreateInfo( vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eFragment, fragmentShaderModule, "main")
+  vector<unsigned int> fragmentShaderSPV; // actual SPIR-V bytecode
+  string fragmentShaderString = fileToString("../shader.frag");
+  assert( GLSLtoSPV( vk::ShaderStageFlagBits::eFragment, fragmentShaderString, fragmentShaderSPV ) ); // Compiling GLSL fragment shader code to SPIR-V
+  vk::ShaderModuleCreateInfo fragmentShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), fragmentShaderSPV );
+  vk::ShaderModule fragmentShaderModule = device.createShaderModule( fragmentShaderModuleCreateInfo );
+
+  glslang::FinalizeProcess();
+
+  array<vk::PipelineShaderStageCreateInfo, 2> pipelineShaderStageCreateInfos = {
+    vk::PipelineShaderStageCreateInfo( vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eVertex, vertexShaderModule, "main" ),
+    vk::PipelineShaderStageCreateInfo( vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eFragment, fragmentShaderModule, "main" )
   };
 
-   // Dynamic states of the pipeline
-   array<vk::DynamicState, 2> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor};
-   vk::PipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo( vk::PipelineDynamicStateCreateFlags(), dynamicStates );
+  array<vk::DynamicState, 2> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor}; // setup viewport and scissor to be able to be changed during rendering
+  vk::PipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo( vk::PipelineDynamicStateCreateFlags(), dynamicStates );
 
-   // Vertex data format setup
-   vk::VertexInputBindingDescription vertexInputBindingDescription( 0, sizeof(float) * 7); // 3 for coordinate, 4 for color
-   array<vk::VertexInputAttributeDescription, 2> vertexInputAttributeDescriptions = {
-      vk::VertexInputAttributeDescription( 0, 0, vk::Format::eR32G32B32A32Sfloat, 0 ),
-      vk::VertexInputAttributeDescription( 1, 0, vk::Format::eR32G32B32A32Sfloat, 12 ),
+  vk::VertexInputBindingDescription vertexInputBindingDescription( 0, 7 * sizeof(float) ); // 3 for coordinate, 4 for color
+  array<vk::VertexInputAttributeDescription, 2> vertexInputAttributeDescriptions = {
+    vk::VertexInputAttributeDescription( 0, 0, vk::Format::eR32G32B32A32Sfloat, 0 ), // 0  -- offset in bytes
+    vk::VertexInputAttributeDescription( 1, 0, vk::Format::eR32G32B32A32Sfloat, 12 ),// 12 -- offset in bytes
   };
   vk::PipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo( vk::PipelineVertexInputStateCreateFlags(),
-     vertexInputBindingDescription,
-     vertexInputAttributeDescriptions
-   );
-   // specify what kind of geometry will be drawn from vertices
-   vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo( vk::PipelineInputAssemblyStateCreateFlags(), 
-          vk::PrimitiveTopology::eTriangleList );
-   // setup the viewport
-   vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.0f, 1.0f);
-   vk::Rect2D scissor({0, 0}, swapchainExtent);
-   vk::PipelineViewportStateCreateInfo pipelineViewportStateCreateInfo( vk::PipelineViewportStateCreateFlags(), 1, &viewport, 1, &scissor);
-   // setting up the rasterizer
-   vk::PipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo( vk::PipelineRasterizationStateCreateFlags(),
-         false, // depthClampEnable / requires GPU enabling
-         false, // rasterizerDiscardEnable / prevents vertices to get to the frame buffer 
-         vk::PolygonMode::eFill,
-                                                                                  vk::CullModeFlagBits::eBack,
-                                                                                  vk::FrontFace::eClockwise,
-                                                                                  false, // depthBiasEnable
-                                                                                  0.0f,  // depthBiasConstantFactor
-                                                                                  0.0f,  // depthBiasClamp
-                                                                                  0.0f,  // depthBiasSlopeFactor
-                                                                                  1.0f   // lineWidth
-                                                                                );
-   // multisampling setup (one of ways to preform anti-aliasing)
-   vk::PipelineMultisampleStateCreateInfo pipelineMultisaampleStateCreateInfo( vk::PipelineMultisampleStateCreateFlags(),
+                                                                             vertexInputBindingDescription,
+                                                                             vertexInputAttributeDescriptions );
+  vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo( vk::PipelineInputAssemblyStateCreateFlags(), 
+                                                                                 vk::PrimitiveTopology::eTriangleList ); // specify what kind of geometry will be drawn from vertices
+  vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.0f, 1.0f);
+  vk::Rect2D scissor({0, 0}, swapchainExtent);
+  vk::PipelineViewportStateCreateInfo pipelineViewportStateCreateInfo( vk::PipelineViewportStateCreateFlags(), 1, &viewport, 1, &scissor);
+  vk::PipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo( vk::PipelineRasterizationStateCreateFlags(),
+                                                                                 false, // depthClampEnable / requires GPU enabling
+                                                                                 false, // rasterizerDiscardEnable / prevents vertices to get to the frame buffer 
+                                                                                 vk::PolygonMode::eFill,
+                                                                                 vk::CullModeFlagBits::eBack,
+                                                                                 vk::FrontFace::eClockwise,
+                                                                                 false, // depthBiasEnable
+                                                                                 0.0f,  // depthBiasConstantFactor
+                                                                                 0.0f,  // depthBiasClamp
+                                                                                 0.0f,  // depthBiasSlopeFactor
+                                                                                 1.0f );  // lineWidth
+  
+  vk::PipelineMultisampleStateCreateInfo pipelineMultisaampleStateCreateInfo(  // multisampling setup (one of ways to preform anti-aliasing)
+                                                                               vk::PipelineMultisampleStateCreateFlags(), 
                                                                                vk::SampleCountFlagBits::e1,
                                                                                false, // sampleShadingEnable
                                                                                1.0f, // minSampleShading
                                                                                nullptr, // pSampleMask
                                                                                false, // alphaToCoverageEnable
-                                                                               false // alphaToOneEnable
-    );
-   vk::StencilOpState stencilOpState( vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::CompareOp::eAlways); // the rest is optional
-   vk::PipelineDepthStencilStateCreateInfo pipelineDepthStencilStateCreateInfo( vk::PipelineDepthStencilStateCreateFlags(),
+                                                                               false ); // alphaToOneEnable
+ 
+  vk::StencilOpState stencilOpState( vk::StencilOp::eKeep, 
+                                     vk::StencilOp::eKeep, 
+                                     vk::StencilOp::eKeep, 
+                                     vk::CompareOp::eAlways ); // the rest is optional
+  
+  vk::PipelineDepthStencilStateCreateInfo pipelineDepthStencilStateCreateInfo( vk::PipelineDepthStencilStateCreateFlags(),
                                                                                true, // depthTestEnable
                                                                                true, // depthWriteEnable
                                                                                vk::CompareOp::eLessOrEqual, // depthCompareOp
                                                                                false, // depthBoundTestEnable
                                                                                false, // stencilTestEnable
                                                                                stencilOpState, // front
-                                                                               stencilOpState // back
-                                                                              );
-   vk::ColorComponentFlags colorComponentFlags( vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA );
-   vk::PipelineColorBlendAttachmentState pipelineColorBlendAttachmentState( false, // blendEnable
-                                                                            vk::BlendFactor::eZero, // srcColorBlendFactor
-                                                                            vk::BlendFactor::eZero, // sdtColorBlendFactro
-                                                                            vk::BlendOp::eAdd, // colorBlendOp
-                                                                            vk::BlendFactor::eZero, // srcAlphaBlendFactor
-                                                                            vk::BlendFactor::eZero, // dstAlphaBlendFactor
-                                                                            vk::BlendOp::eAdd, // AlphaBlendOp
-                                                                            colorComponentFlags
-                                                                          );
-    vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo( vk::PipelineColorBlendStateCreateFlags(),
-                                                                            false, // logicOpEnable
-                                                                            vk::LogicOp::eNoOp, // logicOp
-                                                                            pipelineColorBlendAttachmentState, // attachments
-                                                                            { {1.0f, 1.0f, 1.0f, 1.0f } } // blendContrasts
-                                                                           );
+                                                                               stencilOpState ); // back
+  
+  vk::ColorComponentFlags colorComponentFlags( vk::ColorComponentFlagBits::eR | 
+                                               vk::ColorComponentFlagBits::eG | 
+                                               vk::ColorComponentFlagBits::eB | 
+                                               vk::ColorComponentFlagBits::eA );
 
-   // Setting up the pipeline layout 
-   // used to specify global variables which will be used by the pipeline, e.g. transformation matrices
-   vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo( 
-       vk::PipelineLayoutCreateFlags(), 
-       0, // setLayoutCount
-       nullptr,  // pSetLayouts
-       0, // pushConstantRangeCount 
-       nullptr ); // pPushConstantRanges
-   vk::PipelineLayout pipelineLayout = device.createPipelineLayout( vk::PipelineLayoutCreateInfo( pipelineLayoutCreateInfo ) );
+  vk::PipelineColorBlendAttachmentState pipelineColorBlendAttachmentState( false, // blendEnable
+                                                                           vk::BlendFactor::eZero, // srcColorBlendFactor
+                                                                           vk::BlendFactor::eZero, // sdtColorBlendFactro
+                                                                           vk::BlendOp::eAdd, // colorBlendOp
+                                                                           vk::BlendFactor::eZero, // srcAlphaBlendFactor
+                                                                           vk::BlendFactor::eZero, // dstAlphaBlendFactor
+                                                                           vk::BlendOp::eAdd, // AlphaBlendOp
+                                                                           colorComponentFlags );
+                                                                          
+  vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo( vk::PipelineColorBlendStateCreateFlags(),
+                                                                           false, // logicOpEnable
+                                                                           vk::LogicOp::eNoOp, // logicOp
+                                                                           pipelineColorBlendAttachmentState, // attachments
+                                                                           { {1.0f, 1.0f, 1.0f, 1.0f } } ); // blendContrasts
 
-   // Render Pass 
-   // "...We need to specify how many color and depth buffers there will be, 
-   // how many samples to use for each of them and how their contents should be handled throughout the rendering operations. 
-   // All of this information is wrapped in a render pass object..."
-   vector<vk::AttachmentDescription> attachmentDescriptions;
-   attachmentDescriptions.emplace_back( 
-      vk::AttachmentDescriptionFlags(), 
-      format, // we take from a swapchain color format
-      vk::SampleCountFlagBits::e1,
-      vk::AttachmentLoadOp::eClear,
-      vk::AttachmentStoreOp::eStore,
-      vk::AttachmentLoadOp::eDontCare, // stencil loagOp
-      vk::AttachmentStoreOp::eDontCare, // stencil storeOp
-      vk::ImageLayout::eUndefined,
-      vk::ImageLayout::ePresentSrcKHR
-   );
-   vk::AttachmentReference colorAttachment( 0, vk::ImageLayout::eColorAttachmentOptimal );
-   // vk::AttachmentReference depthAttachment( 1, vk::ImageLayout::eDepthStencilAttachmentOptimal );
-   vk::SubpassDescription subpassDescription( vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, {}, colorAttachment, {}, nullptr);
-   vk::SubpassDependency dependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::AccessFlagBits::eColorAttachmentWrite );
-   vk::RenderPass renderPass = device.createRenderPass( vk::RenderPassCreateInfo( vk::RenderPassCreateFlags(), attachmentDescriptions, subpassDescription, dependency ) );
-   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo( vk::PipelineCreateFlags(),
-      pipelineShaderStageCreateInfos,
-      &pipelineVertexInputStateCreateInfo,
-      &pipelineInputAssemblyStateCreateInfo,
-      nullptr, // Tessalation Stage
-      &pipelineViewportStateCreateInfo,
-      &pipelineRasterizationStateCreateInfo,
-      &pipelineMultisaampleStateCreateInfo,
-      &pipelineDepthStencilStateCreateInfo,
-      &pipelineColorBlendStateCreateInfo,
-      &pipelineDynamicStateCreateInfo,
-      pipelineLayout,
-      renderPass
-   );
-   // Creating graphics pipeline
-   auto [result, pipeline] = device.createGraphicsPipeline( nullptr, graphicsPipelineCreateInfo );
-   if(result != vk::Result::eSuccess)
-     throw runtime_error("Couldn't create graphics pipeline!");
-   // Creating Frame buffers
-   vector<vk::Framebuffer> swapchainFramebuffers;
-   for(auto const & imageView : imageViews) {
-     vk::ImageView attachment = { imageView };
-     vk::FramebufferCreateInfo framebufferCreateInfo( vk::FramebufferCreateFlags(), renderPass, attachment, swapchainExtent.width, swapchainExtent.height, 1 );
-     swapchainFramebuffers.push_back( device.createFramebuffer( framebufferCreateInfo) );
-   }
-   // Creating Command Pool
-   vk::CommandPool commandPool = device.createCommandPool( vk::CommandPoolCreateInfo( vk::CommandPoolCreateFlags( vk::CommandPoolCreateFlagBits::eResetCommandBuffer ), graphicsQueueFamilyIndex ) );
-   vk::CommandBuffer commandBuffer = device.allocateCommandBuffers( vk::CommandBufferAllocateInfo( commandPool, vk::CommandBufferLevel::ePrimary, 1 ) ).front();
+  vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo( // used to specify global variables which will be used by the pipeline, e.g. transformation matrices
+                                                           vk::PipelineLayoutCreateFlags(), 
+                                                           0, // setLayoutCount
+                                                           nullptr,  // pSetLayouts
+                                                           0, // pushConstantRangeCount 
+                                                           nullptr ); // pPushConstantRanges
+  
+  vk::PipelineLayout pipelineLayout = device.createPipelineLayout( vk::PipelineLayoutCreateInfo( pipelineLayoutCreateInfo ) );
 
-   // Begin RenderPass
-   vk::Semaphore imageAvailableSemaphore = device.createSemaphore( vk::SemaphoreCreateInfo() );
-   vk::Semaphore renderFinishedSemaphore = device.createSemaphore( vk::SemaphoreCreateInfo() );
-   vk::Fence inFlightFence = device.createFence( vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled ) );
-   const uint64_t timeout = numeric_limits<uint64_t>::max();
-   array<vk::ClearValue, 2> clearValues; // defining clear value for vk::AttachmentLoadOp::eClear mentioned above
-   array<float, 4> clearColorValues = { 0.0f, 0.0f, 0.0f, 0.0f };
-   // clearValues[0].color = vk::ClearColorValue( 0.2f, 0.2f, 0.2f, 0.2f );
-   clearValues[0].color = vk::ClearColorValue( clearColorValues );
-   clearValues[1].depthStencil = vk::ClearDepthStencilValue( 1.0f, 0 );
-   bool quit = false;
-   while(!quit) { 
-      SDL_Event event;
-      SDL_PollEvent(&event);
-      if(event.type == SDL_QUIT || event.key.keysym.sym == SDLK_ESCAPE)          // if ESC is hit
-         quit = true;
-      // drawing
-      device.waitForFences( inFlightFence, VK_TRUE, timeout ); // 2: wait for all fences (if one fence -- douesn't matter), 3: fenceTimeout
-      device.resetFences( inFlightFence );
-      vk::ResultValue<uint32_t> currentBuffer = device.acquireNextImageKHR(swapchain, timeout, imageAvailableSemaphore, nullptr );
+  // Render Pass 
+  // "...We need to specify how many color and depth buffers there will be, 
+  // how many samples to use for each of them and how their contents should be handled throughout the rendering operations. 
+  // All of this information is wrapped in a render pass object..."
+  vector<vk::AttachmentDescription> attachmentDescriptions;
+  attachmentDescriptions.emplace_back( vk::AttachmentDescriptionFlags(), 
+                                       format, // we take from a swapchain color format
+                                       vk::SampleCountFlagBits::e1,
+                                       vk::AttachmentLoadOp::eClear,
+                                       vk::AttachmentStoreOp::eStore,
+                                       vk::AttachmentLoadOp::eDontCare, // stencil loagOp
+                                       vk::AttachmentStoreOp::eDontCare, // stencil storeOp
+                                       vk::ImageLayout::eUndefined,
+                                       vk::ImageLayout::ePresentSrcKHR );
+
+  vk::AttachmentReference colorAttachment( 0, vk::ImageLayout::eColorAttachmentOptimal );
+  // vk::AttachmentReference depthAttachment( 1, vk::ImageLayout::eDepthStencilAttachmentOptimal ); // TODO
+  vk::SubpassDescription subpassDescription( vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, {}, colorAttachment, {}, nullptr);
+  vk::SubpassDependency dependency( VK_SUBPASS_EXTERNAL, 
+                                    0, 
+                                    vk::PipelineStageFlagBits::eColorAttachmentOutput, 
+                                    vk::PipelineStageFlagBits::eColorAttachmentOutput, 
+                                    vk::AccessFlagBits::eNone, 
+                                    vk::AccessFlagBits::eColorAttachmentWrite );
+  vk::RenderPass renderPass = device.createRenderPass( vk::RenderPassCreateInfo( vk::RenderPassCreateFlags(), attachmentDescriptions, subpassDescription, dependency ) );
+
+  vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(  vk::PipelineCreateFlags(),
+                                                              pipelineShaderStageCreateInfos,
+                                                             &pipelineVertexInputStateCreateInfo,
+                                                             &pipelineInputAssemblyStateCreateInfo,
+                                                              nullptr, // Tessalation Stage
+                                                             &pipelineViewportStateCreateInfo,
+                                                             &pipelineRasterizationStateCreateInfo,
+                                                             &pipelineMultisaampleStateCreateInfo,
+                                                             &pipelineDepthStencilStateCreateInfo,
+                                                             &pipelineColorBlendStateCreateInfo,
+                                                             &pipelineDynamicStateCreateInfo,
+                                                              pipelineLayout,
+                                                              renderPass );
+  auto [result, pipeline] = device.createGraphicsPipeline( nullptr, graphicsPipelineCreateInfo );
+  if( result != vk::Result::eSuccess )
+    throw runtime_error( "Couldn't create graphics pipeline!" );
+
+  vector<vk::Framebuffer> swapchainFramebuffers;
+  for(auto const & imageView : imageViews) 
+  {
+    vk::ImageView             attachment = { imageView };
+    vk::FramebufferCreateInfo framebufferCreateInfo( vk::FramebufferCreateFlags(), 
+                                                     renderPass, 
+                                                     attachment, 
+                                                     swapchainExtent.width, 
+                                                     swapchainExtent.height, 
+                                                     1 );
+    swapchainFramebuffers.push_back( device.createFramebuffer( framebufferCreateInfo) );
+  }
+
+  /* Preparing for rendering */
+  array<vk::ClearValue, 2> clearValues; // defining clear value for vk::AttachmentLoadOp::eClear mentioned above
+  array<float, 4> clearColorValues = { 0.0f, 0.0f, 0.0f, 0.0f };
+  clearValues[0].color        = vk::ClearColorValue( clearColorValues );
+  clearValues[1].depthStencil = vk::ClearDepthStencilValue( 1.0f, 0 );
+
+  vk::Semaphore imageAvailableSemaphore = device.createSemaphore( vk::SemaphoreCreateInfo() );
+  vk::Semaphore renderFinishedSemaphore = device.createSemaphore( vk::SemaphoreCreateInfo() );
+  vk::Fence     inFlightFence           = device.createFence( vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled ) );
+
+  const uint64_t timeout = numeric_limits<uint64_t>::max();
+
+  /* Main Rendering Loop */
+  bool quit = false;
+  while( !quit ) 
+  { 
+     SDL_Event event;
+     SDL_PollEvent( &event );
+     if( event.type == SDL_QUIT || event.key.keysym.sym == SDLK_ESCAPE ) quit = true;
+
+     /* Srating to draw */
+     device.waitForFences( inFlightFence, VK_TRUE, timeout ); // 2: wait for all fences (if one fence -- douesn't matter), 3: fenceTimeout
+     device.resetFences( inFlightFence ); // unsignal fence
+
+     vk::ResultValue<uint32_t> currentBuffer = device.acquireNextImageKHR( swapchain, timeout, imageAvailableSemaphore, nullptr );
 #ifndef NDEBUG
-      assert( currentBuffer.result == vk::Result::eSuccess );
+     assert( currentBuffer.result == vk::Result::eSuccess );
 #endif
-      commandBuffer.reset(); // make sure buffer is available
-      // start loading commands to the command buffer
-      commandBuffer.begin( vk::CommandBufferBeginInfo( vk::CommandBufferUsageFlags() ) ); // start a buffers
-      vk::RenderPassBeginInfo renderPassBeginInfo( renderPass, swapchainFramebuffers[currentBuffer.value], vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ), clearValues );
-      commandBuffer.beginRenderPass( renderPassBeginInfo, vk::SubpassContents::eInline ); // all commands submit to primary command buffer
-      // Main Rendering Loop
-      commandBuffer.bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline ); // first parameter specifies whether the pipeline is graphical or computational
-      // commandBuffer.bindVertexBuffers(0 )
-      // since we stated that viewport and scissor to be dynamic, we have to their values
-      commandBuffer.bindVertexBuffers( 0, vk::Buffer{}, { 0 } );
-      commandBuffer.setViewport( 0, vk::Viewport( 0.0f, 0.0f, static_cast<float>( swapchainExtent.width ), static_cast<float>( swapchainExtent.height ), 0.0f, 1.0f ) );
-      commandBuffer.setScissor( 0, vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ) );
-      // loading command to commandBuffer for execution
-      commandBuffer.draw( 3, // number of vertices
-                          1, // used for instanced drawing
-                          0, // firstVertex offset
-                          0 // firstInstance offset
-                        );
-      // after drawing we can now end renderPass and commandBuffer
-      commandBuffer.endRenderPass();
-      commandBuffer.end();
-      vk::PipelineStageFlags waitDestinationStageMask( vk::PipelineStageFlagBits::eColorAttachmentOutput );
-      vk::SubmitInfo submitInfo( imageAvailableSemaphore, waitDestinationStageMask, commandBuffer, renderFinishedSemaphore );
-      graphicsQueue.submit( submitInfo, inFlightFence );
-      presentQueue.presentKHR( vk::PresentInfoKHR( {}, swapchain, currentBuffer.value ) );
-      quit = true;
-   }
-   // when exiting main loop drawing and presentation operation may still be going and destroying its resources is a bad idea. Solution:
-   device.waitIdle();
+
+     commandBuffer.reset(); // make sure buffer is available
+
+     commandBuffer.begin( vk::CommandBufferBeginInfo( vk::CommandBufferUsageFlags() ) ); // start a buffer
+     vk::RenderPassBeginInfo renderPassBeginInfo( renderPass, swapchainFramebuffers[currentBuffer.value], vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ), clearValues );
+     commandBuffer.beginRenderPass( renderPassBeginInfo, vk::SubpassContents::eInline ); // all commands submit to primary command buffer
+     commandBuffer.bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline ); // first parameter specifies whether the pipeline is graphical or computational
+     
+     commandBuffer.bindVertexBuffers( 0, vk::Buffer{}, { 0 } ); // since we made viewport and scissor to be dynamic, we have to specify them now
+     commandBuffer.setViewport( 0, vk::Viewport( 0.0f, 0.0f, static_cast<float>( swapchainExtent.width ), static_cast<float>( swapchainExtent.height ), 0.0f, 1.0f ) );
+     commandBuffer.setScissor( 0, vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ) );
+     // loading command to commandBuffer for execution
+     commandBuffer.draw( 3, // number of vertices
+                         1, // used for instanced drawing
+                         0, // firstVertex offset
+                         0 ); // firstInstance offset
+     // after drawing we can now end renderPass and commandBuffer
+     commandBuffer.endRenderPass();
+     commandBuffer.end();
+     vk::PipelineStageFlags waitDestinationStageMask( vk::PipelineStageFlagBits::eColorAttachmentOutput );
+     vk::SubmitInfo submitInfo( imageAvailableSemaphore, waitDestinationStageMask, commandBuffer, renderFinishedSemaphore );
+     graphicsQueue.submit( submitInfo, inFlightFence );
+     presentQueue.presentKHR( vk::PresentInfoKHR( {}, swapchain, currentBuffer.value ) );
+     // quit = true;
+  }
+  /* when exiting main loop drawing and presentation operation may still be going and destroying its resources is a bad idea. Solution: */
+  device.waitIdle();
 
    // cleanup 
   device.destroyFence( inFlightFence );
@@ -509,21 +490,22 @@ int main(int argc, char** argv) try {
   device.destroyPipelineLayout( pipelineLayout );
   device.destroyShaderModule( fragmentShaderModule );
   device.destroyShaderModule( vertexShaderModule );
-   for( auto & imageView : imageViews )
-      device.destroyImageView( imageView );
-   device.destroySwapchainKHR( swapchain );
-   instance.destroySurfaceKHR( surface );
-   device.destroy();
-#ifndef NDEBUG
-// instance.destroyDebugUtilsMessengerEXT( debugUtilsMessenger );
-#endif
-   instance.destroy();
-   return EXIT_SUCCESS;
-} catch(SDL2pp::Exception& e) {
-   cerr << "Error in: " << e.GetSDLFunction() << endl;
-   cerr << "   Reason: " << e.GetSDLError() << endl;
-   return EXIT_FAILURE;
-} catch(const exception& e) {
-   cerr << e.what() << endl;
-   return EXIT_FAILURE;
+  for( auto & imageView : imageViews )
+    device.destroyImageView( imageView );
+  device.destroySwapchainKHR( swapchain );
+  instance.destroySurfaceKHR( surface );
+  device.destroy();
+  instance.destroy();
+  return EXIT_SUCCESS;
+} 
+catch(SDL2pp::Exception& e) 
+{
+  cerr << "Error in: " << e.GetSDLFunction() << endl;
+  cerr << "   Reason: " << e.GetSDLError() << endl;
+  return EXIT_FAILURE;
+} 
+catch(const exception& e) 
+{
+  cerr << e.what() << endl;
+  return EXIT_FAILURE;
 } 
