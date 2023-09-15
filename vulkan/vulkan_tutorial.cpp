@@ -196,7 +196,7 @@ int main( int /*argc*/, char** /*argv*/ ) try
   vk::DeviceQueueCreateInfo deviceQueueCreateInfo( vk::DeviceQueueCreateFlags(), static_cast<uint32_t>( graphicsQueueFamilyIndex ), 1, &queuePriority );
 
   vk::DeviceCreateInfo deviceCreateInfo( vk::DeviceCreateFlags(), deviceQueueCreateInfo, {}, deviceExtensions );
-  vk::Device device             = physicalDevice.createDevice( deviceCreateInfo );
+  vk::Device device             = physicalDevice.createDevice( deviceCreateInfo ); // "a GPU driver"
   vk::CommandPool commandPool   = device.createCommandPool( vk::CommandPoolCreateInfo( vk::CommandPoolCreateFlags( vk::CommandPoolCreateFlagBits::eResetCommandBuffer ), graphicsQueueFamilyIndex ) );
 
   /* Actual objects used during rendering loop */
@@ -253,7 +253,8 @@ int main( int /*argc*/, char** /*argv*/ ) try
                                                   true,
                                                   nullptr );
 
-  vk::SwapchainKHR swapchain = device.createSwapchainKHR ( swapchainCreateInfo );
+  vk::SwapchainKHR swapchain = device.createSwapchainKHR ( swapchainCreateInfo ); // optional, used for rendering to the screen
+  // NOTE: if the window resizes, swapchain must be recreated
                                                   
   vector<vk::Image> swapchainImages = device.getSwapchainImagesKHR( swapchain );
   vector<vk::ImageView> imageViews;
@@ -390,6 +391,8 @@ int main( int /*argc*/, char** /*argv*/ ) try
                                     vk::AccessFlagBits::eNone, 
                                     vk::AccessFlagBits::eColorAttachmentWrite );
   vk::RenderPass renderPass = device.createRenderPass( vk::RenderPassCreateInfo( vk::RenderPassCreateFlags(), attachmentDescriptions, subpassDescription, dependency ) );
+  // NOTE: it is impossible to do rendering commands outside of the renderPass,
+  //       but it's possible to do compute commands without it 
 
   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(  vk::PipelineCreateFlags(),
                                                               pipelineShaderStageCreateInfos,
@@ -435,7 +438,7 @@ int main( int /*argc*/, char** /*argv*/ ) try
 
   /* Main Rendering Loop */
   bool quit = false;
-  while( !quit ) 
+  while( !quit )
   { 
      SDL_Event event;
      SDL_PollEvent( &event );
@@ -445,12 +448,18 @@ int main( int /*argc*/, char** /*argv*/ ) try
      device.waitForFences( inFlightFence, VK_TRUE, timeout ); // 2: wait for all fences (if one fence -- douesn't matter), 3: fenceTimeout
      device.resetFences( inFlightFence ); // unsignal fence
 
-     vk::ResultValue<uint32_t> currentBuffer = device.acquireNextImageKHR( swapchain, timeout, imageAvailableSemaphore, nullptr );
+     vk::ResultValue<uint32_t> currentBuffer = device.acquireNextImageKHR( swapchain, 
+                                                                           timeout, 
+                                                                           imageAvailableSemaphore, // signalSemaphores
+                                                                           nullptr );
 #ifndef NDEBUG
      assert( currentBuffer.result == vk::Result::eSuccess );
 #endif
 
-     commandBuffer.reset(); // make sure buffer is available
+     // TODO: resetting the pool instead of te buffer is quicker if you have multiple buffers per pool
+     // NOTE: resetting the buffer is unsafe when it is still in submition DynamicState
+     //       that's why inFlightFence wait command is used above    
+     commandBuffer.reset(); // clear the buffer
 
      commandBuffer.begin( vk::CommandBufferBeginInfo( vk::CommandBufferUsageFlags() ) ); // start a buffer
      vk::RenderPassBeginInfo renderPassBeginInfo( renderPass, swapchainFramebuffers[currentBuffer.value], vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ), clearValues );
@@ -469,9 +478,12 @@ int main( int /*argc*/, char** /*argv*/ ) try
      commandBuffer.endRenderPass();
      commandBuffer.end();
      vk::PipelineStageFlags waitDestinationStageMask( vk::PipelineStageFlagBits::eColorAttachmentOutput );
-     vk::SubmitInfo submitInfo( imageAvailableSemaphore, waitDestinationStageMask, commandBuffer, renderFinishedSemaphore );
+     vk::SubmitInfo submitInfo( imageAvailableSemaphore, // waitSemaphores
+                                waitDestinationStageMask, 
+                                commandBuffer, 
+                                renderFinishedSemaphore ); // signalSemaphores
      graphicsQueue.submit( submitInfo, inFlightFence );
-     presentQueue.presentKHR( vk::PresentInfoKHR( {}, swapchain, currentBuffer.value ) );
+     presentQueue.presentKHR( vk::PresentInfoKHR( renderFinishedSemaphore, swapchain, currentBuffer.value ) );
      // quit = true;
   }
   /* when exiting main loop drawing and presentation operation may still be going and destroying its resources is a bad idea. Solution: */
