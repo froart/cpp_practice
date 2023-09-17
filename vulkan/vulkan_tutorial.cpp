@@ -23,6 +23,18 @@ const int width  = 800;
 const int height = 600;
 const char* appName = "Vulkan Tutorial";
 const uint32_t framesInFlight = 2;
+
+struct Vertex {
+  glm::vec2 pos;
+  glm::vec3 color;
+};
+
+const vector<Vertex> vertices = {
+  { {  0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+  { {  0.5f,  0.5f }, { 0.0f, 1.0f, 0.0f } },
+  { { -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f } },
+};
+
 // TODO: DebugUtilsMessenger
 
 // Enabling extensions
@@ -269,15 +281,41 @@ int main( int /*argc*/, char** /*argv*/ ) try
 
   glslang::InitializeProcess();
 
+  const string vertexShaderGLSLCode = R"(
+    #version 450
+
+    layout( location = 0 ) in vec2 inPosition; // location is an attribute position in VBO
+    layout( location = 1 ) in vec3 inColor;
+
+    layout( location = 0 ) out vec3 fragColor; 
+
+    void main() {
+       gl_Position = vec4( inPosition, 0.0, 1.0 );
+       fragColor = inColor;
+    }
+  )";
+
+  const string fragmentShaderGLSLCode = R"(
+    #version 450
+
+    layout(location = 0) in vec3 fragColor; // location = 0 is an index of the 0-th framebuffer
+
+    layout(location = 0) out vec4 outColor;
+
+    void main() {
+      outColor = vec4(fragColor, 1.0);
+    } 
+  )";
+
   vector<unsigned int> vertexShaderSPV; // actual SPIR-V bytecode
-  string vertexShaderString = fileToString("../shader.vert");
-  assert ( GLSLtoSPV( vk::ShaderStageFlagBits::eVertex, vertexShaderString, vertexShaderSPV ) ); // Compiling GLSL vertex shader code to SPIR-V
+  // string vertexShaderString = fileToString("../shader.vert");
+  assert ( GLSLtoSPV( vk::ShaderStageFlagBits::eVertex, vertexShaderGLSLCode, vertexShaderSPV ) ); // Compiling GLSL vertex shader code to SPIR-V
   vk::ShaderModuleCreateInfo vertexShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), vertexShaderSPV );
   vk::ShaderModule vertexShaderModule = device.createShaderModule( vertexShaderModuleCreateInfo );
 
   vector<unsigned int> fragmentShaderSPV; // actual SPIR-V bytecode
-  string fragmentShaderString = fileToString("../shader.frag");
-  assert( GLSLtoSPV( vk::ShaderStageFlagBits::eFragment, fragmentShaderString, fragmentShaderSPV ) ); // Compiling GLSL fragment shader code to SPIR-V
+  // string fragmentShaderString = fileToString("../shader.frag");
+  assert( GLSLtoSPV( vk::ShaderStageFlagBits::eFragment, fragmentShaderGLSLCode, fragmentShaderSPV ) ); // Compiling GLSL fragment shader code to SPIR-V
   vk::ShaderModuleCreateInfo fragmentShaderModuleCreateInfo( vk::ShaderModuleCreateFlags(), fragmentShaderSPV );
   vk::ShaderModule fragmentShaderModule = device.createShaderModule( fragmentShaderModuleCreateInfo );
 
@@ -291,16 +329,23 @@ int main( int /*argc*/, char** /*argv*/ ) try
   array<vk::DynamicState, 2> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor}; // setup viewport and scissor to be able to be changed during rendering
   vk::PipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo( vk::PipelineDynamicStateCreateFlags(), dynamicStates );
 
-  vk::VertexInputBindingDescription vertexInputBindingDescription( 0, 7 * sizeof(float) ); // 3 for coordinate, 4 for color
+
+
+
+  vk::VertexInputBindingDescription vertexInputBindingDescription( 0, sizeof( Vertex ) ); // 1: index of binding in the array of bindings  
   array<vk::VertexInputAttributeDescription, 2> vertexInputAttributeDescriptions = {
-    vk::VertexInputAttributeDescription( 0, 0, vk::Format::eR32G32B32A32Sfloat, 0 ), // 0  -- offset in bytes
-    vk::VertexInputAttributeDescription( 1, 0, vk::Format::eR32G32B32A32Sfloat, 12 ),// 12 -- offset in bytes
+    vk::VertexInputAttributeDescription( 0, // binding 
+                                         0, // location (in GLSL)
+                                         vk::Format::eR32G32Sfloat, 
+                                         0 ), // 0  -- offset in bytes
+    vk::VertexInputAttributeDescription( 1, 0, vk::Format::eR32G32B32Sfloat, offsetof( Vertex, pos ) ),// 12 -- offset in bytes
   };
   vk::PipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo( vk::PipelineVertexInputStateCreateFlags(),
                                                                              vertexInputBindingDescription,
                                                                              vertexInputAttributeDescriptions );
   vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo( vk::PipelineInputAssemblyStateCreateFlags(), 
                                                                                  vk::PrimitiveTopology::eTriangleList ); // specify what kind of geometry will be drawn from vertices
+  
   vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.0f, 1.0f);
   vk::Rect2D scissor({0, 0}, swapchainExtent);
   vk::PipelineViewportStateCreateInfo pipelineViewportStateCreateInfo( vk::PipelineViewportStateCreateFlags(), 1, &viewport, 1, &scissor);
@@ -395,6 +440,7 @@ int main( int /*argc*/, char** /*argv*/ ) try
   vk::RenderPass renderPass = device.createRenderPass( vk::RenderPassCreateInfo( vk::RenderPassCreateFlags(), attachmentDescriptions, subpassDescription, dependency ) );
   // NOTE: it is impossible to do rendering commands outside of the renderPass,
   //       but it's possible to do compute commands without it 
+
 
   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(  vk::PipelineCreateFlags(),
                                                               pipelineShaderStageCreateInfos,
