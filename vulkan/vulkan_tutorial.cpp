@@ -22,6 +22,7 @@ using namespace std;
 const int width  = 800;
 const int height = 600;
 const char* appName = "Vulkan Tutorial";
+const uint32_t framesInFlight = 2;
 // TODO: DebugUtilsMessenger
 
 // Enabling extensions
@@ -203,7 +204,7 @@ int main( int /*argc*/, char** /*argv*/ ) try
   vk::Queue graphicsQueue = device.getQueue( graphicsQueueFamilyIndex, 0 );
   vk::Queue presentQueue  = device.getQueue( presentQueueFamilyIndex, 0 );
   // vk::CommandBuffer commandBuffer = device.allocateCommandBuffers( vk::CommandBufferAllocateInfo( commandPool, vk::CommandBufferLevel::ePrimary, 1 ) ).front();
-  vector<vk::CommandBuffer> commandBuffers = device.allocateCommandBuffers( vk::CommandBufferAllocateInfo( commandPool, vk::CommandBufferLevel::ePrimary, 2 ) );
+  vector<vk::CommandBuffer> commandBuffers = device.allocateCommandBuffers( vk::CommandBufferAllocateInfo( commandPool, vk::CommandBufferLevel::ePrimary, framesInFlight ) );
   
   vector<vk::SurfaceFormatKHR> formats = physicalDevice.getSurfaceFormatsKHR( surface ); // Retrieve supported formats
 #ifndef NDEBUG
@@ -433,9 +434,9 @@ int main( int /*argc*/, char** /*argv*/ ) try
   clearValues[1].depthStencil = vk::ClearDepthStencilValue( 1.0f, 0 );
 
   // NOTE: Implementing rendering and presentation concurrently
-  vector<vk::Semaphore> imageAvailableSemaphores( 2, device.createSemaphore( vk::SemaphoreCreateInfo() ) );
-  vector<vk::Semaphore> renderFinishedSemaphores( 2, device.createSemaphore( vk::SemaphoreCreateInfo() ) );
-  vector<vk::Fence>     inFlightFences( 2 , device.createFence( vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled ) ) );
+  vector<vk::Semaphore> imageAvailableSemaphores( framesInFlight, device.createSemaphore( vk::SemaphoreCreateInfo() ) );
+  vector<vk::Semaphore> renderFinishedSemaphores( framesInFlight, device.createSemaphore( vk::SemaphoreCreateInfo() ) );
+  vector<vk::Fence>     inFlightFences( framesInFlight , device.createFence( vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled ) ) );
 
   const uint64_t timeout = numeric_limits<uint64_t>::max();
 
@@ -493,13 +494,13 @@ int main( int /*argc*/, char** /*argv*/ ) try
      graphicsQueue.submit( submitInfo, inFlightFences[currentFrame] );
      presentQueue.presentKHR( vk::PresentInfoKHR( renderFinishedSemaphores[currentFrame], swapchain, currentBuffer.value ) );
      // quit = true;
-     currentFrame = (currentFrame + 1) % 2;
+     currentFrame = (currentFrame + 1) % framesInFlight;
   }
   /* when exiting main loop drawing and presentation operation may still be going and destroying its resources is a bad idea. Solution: */
   device.waitIdle(); // wait until all GPU operations complete
 
    // cleanup 
-  for(int i = 0; i < 2; ++i)
+  for(int i = 0; i < framesInFlight; ++i)
   {
      device.destroyFence( inFlightFences[i] );
      device.destroySemaphore( imageAvailableSemaphores[i] );
