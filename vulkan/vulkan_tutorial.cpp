@@ -1,5 +1,5 @@
-//#include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_raii.hpp>
+#include <vulkan/vulkan.hpp>
+// #include <vulkan/vulkan_raii.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <iostream>
@@ -329,23 +329,49 @@ int main( int /*argc*/, char** /*argv*/ ) try
   array<vk::DynamicState, 2> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor}; // setup viewport and scissor to be able to be changed during rendering
   vk::PipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo( vk::PipelineDynamicStateCreateFlags(), dynamicStates );
 
-
-
-
-  vk::VertexInputBindingDescription vertexInputBindingDescription( 0, sizeof( Vertex ) ); // 1: index of binding in the array of bindings  
+  vk::VertexInputBindingDescription vertexInputBindingDescription( 0, sizeof( Vertex ), vk::VertexInputRate::eVertex ); // 1: index of binding in the array of bindings  
   array<vk::VertexInputAttributeDescription, 2> vertexInputAttributeDescriptions = {
     vk::VertexInputAttributeDescription( 0, // binding 
                                          0, // location (in GLSL)
                                          vk::Format::eR32G32Sfloat, 
-                                         0 ), // 0  -- offset in bytes
-    vk::VertexInputAttributeDescription( 1, 0, vk::Format::eR32G32B32Sfloat, offsetof( Vertex, pos ) ),// 12 -- offset in bytes
+                                         offsetof( Vertex, pos ) ), // 0  -- offset in bytes
+    vk::VertexInputAttributeDescription( 1, 
+                                         0, // location (in GLSL)
+                                         vk::Format::eR32G32B32Sfloat, 
+                                         offsetof( Vertex, color ) )
   };
+
   vk::PipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo( vk::PipelineVertexInputStateCreateFlags(),
                                                                              vertexInputBindingDescription,
                                                                              vertexInputAttributeDescriptions );
   vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo( vk::PipelineInputAssemblyStateCreateFlags(), 
                                                                                  vk::PrimitiveTopology::eTriangleList ); // specify what kind of geometry will be drawn from vertices
   
+  vk::Buffer vertexBuffer = device.createBuffer( vk::BufferCreateInfo ( vk::BufferCreateFlags(), sizeof( vertices[0] ) * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer ) );
+  vk::MemoryRequirements memoryRequirements = device.getBufferMemoryRequirements( vertexBuffer );
+  vk::PhysicalDeviceMemoryProperties memoryProperties = physicalDevice.getMemoryProperties();
+  uint32_t memoryTypeIndex = uint32_t( ~0 );
+  vk::MemoryPropertyFlags requirementsMask;
+  for( uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++ )
+  {
+    if ( ( memoryRequirements.memoryTypeBits & 1 ) && ( ( memoryProperties.memoryTypes[i].propertyFlags & requirementsMask ) == requirementsMask ) )
+    {
+      memoryTypeIndex = i;
+      break;
+    }
+    memoryRequirements.memoryTypeBits >>= 1;
+  }
+  assert( memoryTypeIndex != uint32_t( ~0 ) );
+#ifndef NDEBUG
+  cout << "memoryTypeIndex = " << memoryTypeIndex << endl;
+#endif
+  vk::DeviceMemory deviceMemory = device.allocateMemory( vk::MemoryAllocateInfo( memoryRequirements.size, memoryTypeIndex ) );
+  device.bindBufferMemory( vertexBuffer, deviceMemory, 0 );
+  /* actually allocating memory to GPU */
+  uint8_t* deviceData = static_cast<uint8_t*>( device.mapMemory( deviceMemory, 0, sizeof( vertices[0] ) * vertices.size() ) );
+  memcpy( deviceData, vertices.data(), sizeof( vertices[0] ) * vertices.size() );
+  device.unmapMemory( deviceMemory );
+
   vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.0f, 1.0f);
   vk::Rect2D scissor({0, 0}, swapchainExtent);
   vk::PipelineViewportStateCreateInfo pipelineViewportStateCreateInfo( vk::PipelineViewportStateCreateFlags(), 1, &viewport, 1, &scissor);
@@ -521,11 +547,11 @@ int main( int /*argc*/, char** /*argv*/ ) try
      commandBuffers[currentFrame].beginRenderPass( renderPassBeginInfo, vk::SubpassContents::eInline ); // all commands submit to primary command buffer
      commandBuffers[currentFrame].bindPipeline( vk::PipelineBindPoint::eGraphics, pipeline ); // first parameter specifies whether the pipeline is graphical or computational
      
-     commandBuffers[currentFrame].bindVertexBuffers( 0, vk::Buffer{}, { 0 } ); // since we made viewport and scissor to be dynamic, we have to specify them now
+     commandBuffers[currentFrame].bindVertexBuffers( 0, vertexBuffer, { 0 } ); // since we made viewport and scissor to be dynamic, we have to specify them now
      commandBuffers[currentFrame].setViewport( 0, vk::Viewport( 0.0f, 0.0f, static_cast<float>( swapchainExtent.width ), static_cast<float>( swapchainExtent.height ), 0.0f, 1.0f ) );
      commandBuffers[currentFrame].setScissor( 0, vk::Rect2D( vk::Offset2D( 0, 0 ), swapchainExtent ) );
      // loading command to commandBuffer for execution
-     commandBuffers[currentFrame].draw( 3, // number of vertices
+     commandBuffers[currentFrame].draw( static_cast<uint32_t>( vertices.size() ), // number of vertices
                                         1, // used for instanced drawing
                                         0, // firstVertex offset
                                         0 ); // firstInstance offset
@@ -556,6 +582,7 @@ int main( int /*argc*/, char** /*argv*/ ) try
   device.destroyCommandPool( commandPool );
   for(auto const & swapchainFramebuffer : swapchainFramebuffers)
     device.destroyFramebuffer( swapchainFramebuffer );
+  device.destroyBuffer( vertexBuffer );
   device.destroyPipeline( pipeline );
   device.destroyRenderPass ( renderPass );
   device.destroyPipelineLayout( pipelineLayout );
