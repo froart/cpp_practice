@@ -506,9 +506,16 @@ int main( int /*argc*/, char** /*argv*/ ) try
   clearValues[1].depthStencil = vk::ClearDepthStencilValue( 1.0f, 0 );
 
   // NOTE: Implementing rendering and presentation concurrently
-  vector<vk::Semaphore> imageAvailableSemaphores( framesInFlight, device.createSemaphore( vk::SemaphoreCreateInfo() ) );
-  vector<vk::Semaphore> renderFinishedSemaphores( framesInFlight, device.createSemaphore( vk::SemaphoreCreateInfo() ) );
-  vector<vk::Fence>     inFlightFences( framesInFlight , device.createFence( vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled ) ) );
+
+  vector<vk::Semaphore> imageAvailableSemaphores( framesInFlight );
+  vector<vk::Semaphore> renderFinishedSemaphores( framesInFlight );
+  vector<vk::Fence>     inFlightFences( framesInFlight );
+  for( size_t i = 0; i < framesInFlight; ++i ) 
+  {
+    imageAvailableSemaphores[i] = device.createSemaphore( vk::SemaphoreCreateInfo() );
+    renderFinishedSemaphores[i] = device.createSemaphore( vk::SemaphoreCreateInfo() );
+    inFlightFences[i]           = device.createFence( vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled ) );
+  }
 
   const uint64_t timeout = numeric_limits<uint64_t>::max();
 
@@ -565,14 +572,14 @@ int main( int /*argc*/, char** /*argv*/ ) try
                                 renderFinishedSemaphores[currentFrame] ); // signalSemaphores
      graphicsQueue.submit( submitInfo, inFlightFences[currentFrame] );
      presentQueue.presentKHR( vk::PresentInfoKHR( renderFinishedSemaphores[currentFrame], swapchain, currentBuffer.value ) );
-     // quit = true;
+     quit = true;
      currentFrame = (currentFrame + 1) % framesInFlight;
   }
   /* when exiting main loop drawing and presentation operation may still be going and destroying its resources is a bad idea. Solution: */
   device.waitIdle(); // wait until all GPU operations complete
 
    // cleanup 
-  for(int i = 0; i < framesInFlight; ++i)
+  for(uint32_t i = 0; i < framesInFlight; ++i)
   {
      device.destroyFence( inFlightFences[i] );
      device.destroySemaphore( imageAvailableSemaphores[i] );
@@ -582,6 +589,7 @@ int main( int /*argc*/, char** /*argv*/ ) try
   device.destroyCommandPool( commandPool );
   for(auto const & swapchainFramebuffer : swapchainFramebuffers)
     device.destroyFramebuffer( swapchainFramebuffer );
+  device.freeMemory( deviceMemory );
   device.destroyBuffer( vertexBuffer );
   device.destroyPipeline( pipeline );
   device.destroyRenderPass ( renderPass );
