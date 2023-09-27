@@ -1,5 +1,4 @@
 #include <vulkan/vulkan.hpp>
-// #include <vulkan/vulkan_raii.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <iostream>
@@ -53,24 +52,24 @@ const bool enableValidationLayers = false;
 // Check if specifies validationLayers are actually supported by the system
 bool checkValidationLayerSupport() 
 {
-   unsigned int layerCount;
-   vk::enumerateInstanceLayerProperties( &layerCount, nullptr );
-   vector<vk::LayerProperties> availableLayers( layerCount );
-   vk::enumerateInstanceLayerProperties( &layerCount, availableLayers.data() );
-   for( const char* layerName : validationLayers ) 
-   {
-      bool layerFound = false;
-      for( const auto& layerProperties : availableLayers )
+  unsigned int layerCount;
+  vk::enumerateInstanceLayerProperties( &layerCount, nullptr );
+  vector<vk::LayerProperties> availableLayers( layerCount );
+  vk::enumerateInstanceLayerProperties( &layerCount, availableLayers.data() );
+  for( const char* layerName : validationLayers ) 
+  {
+    bool layerFound = false;
+    for( const auto& layerProperties : availableLayers )
+    {
+      if( strcmp( layerName, layerProperties.layerName ) == 0)
       {
-         if( strcmp( layerName, layerProperties.layerName ) == 0)
-         {
-            layerFound = true;
-            break;
-         }
+         layerFound = true;
+         break;
       }
-      if( !layerFound ) return false;
-   }
-   return true;
+    }
+    if( !layerFound ) return false;
+  }
+  return true;
 }
 #endif
 
@@ -572,7 +571,7 @@ int main( int /*argc*/, char** /*argv*/ ) try
                                 renderFinishedSemaphores[currentFrame] ); // signalSemaphores
      graphicsQueue.submit( submitInfo, inFlightFences[currentFrame] );
      presentQueue.presentKHR( vk::PresentInfoKHR( renderFinishedSemaphores[currentFrame], swapchain, currentBuffer.value ) );
-     quit = true;
+     // quit = true;
      currentFrame = (currentFrame + 1) % framesInFlight;
   }
   /* when exiting main loop drawing and presentation operation may still be going and destroying its resources is a bad idea. Solution: */
